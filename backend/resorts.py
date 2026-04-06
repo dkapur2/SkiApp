@@ -435,30 +435,51 @@ OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 FORECAST_DAYS = 16  # today + 15
 HOURLY_WINDOW = 12
 
+# Fetched at every elevation (base, mid, peak)
 ELEVATION_DAILY_VARS = [
     "temperature_2m_max",
     "temperature_2m_min",
+    "apparent_temperature_max",
+    "apparent_temperature_min",
     "windspeed_10m_max",
     "windgusts_10m_max",
-]
-
-PEAK_EXTRA_DAILY_VARS = [
     "snowfall_sum",
+    "rain_sum",
     "precipitation_sum",
 ]
 
 ELEVATION_HOURLY_VARS = [
     "temperature_2m",
+    "apparent_temperature",
     "windspeed_10m",
     "windgusts_10m",
-]
-
-PEAK_EXTRA_HOURLY_VARS = [
     "snowfall",
+    "rain",
     "precipitation",
-    "cloudcover",
+    "snow_depth",
+    "visibility",
 ]
 
+# Additional variables fetched at peak only (not elevation-dependent)
+PEAK_EXTRA_HOURLY_VARS = [
+    "cloudcover",
+    "freezinglevel_height",
+]
+
+
+# ── Unit helpers ───────────────────────────────────────────────────────────────
+
+def _m_to_in(v: float | None) -> float | None:
+    return round(v * 39.3701, 2) if v is not None else None
+
+def _m_to_mi(v: float | None) -> float | None:
+    return round(v / 1609.34, 1) if v is not None else None
+
+def _m_to_ft(v: float | None) -> int | None:
+    return round(v * 3.28084) if v is not None else None
+
+
+# ── API fetch ─────────────────────────────────────────────────────────────────
 
 async def _fetch(
     client: httpx.AsyncClient,
@@ -485,6 +506,8 @@ async def _fetch(
     return response.json()
 
 
+# ── Hourly → daily aggregation helpers ────────────────────────────────────────
+
 def _current_hour_index(data: dict[str, Any]) -> int:
     utc_offset = timedelta(seconds=data["utc_offset_seconds"])
     local_now = datetime.now(timezone.utc) + utc_offset
@@ -493,24 +516,36 @@ def _current_hour_index(data: dict[str, Any]) -> int:
     return next((i for i, t in enumerate(times) if t == current_hour_str), 0)
 
 
-def _daily_cloud_cover_avgs(data: dict[str, Any]) -> dict[str, int]:
+def _daily_agg(data: dict[str, Any], var: str, fn) -> dict[str, Any]:
+    """Bucket hourly values by date, apply fn to each bucket, skip Nones."""
     times = data["hourly"]["time"]
-    values = data["hourly"]["cloudcover"]
-    buckets: dict[str, list[int]] = {}
+    values = data["hourly"].get(var, [])
+    buckets: dict[str, list] = {}
     for t, v in zip(times, values):
         if v is not None:
             buckets.setdefault(t[:10], []).append(v)
-    return {date: round(sum(vals) / len(vals)) for date, vals in buckets.items()}
+    return {date: fn(vals) for date, vals in buckets.items()}
 
 
 def _elevation_days(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     d = data["daily"]
+    # Aggregate hourly-only variables to daily
+    snow_depth_max = _daily_agg(data, "snow_depth", lambda v: _m_to_in(max(v)))
+    visibility_min = _daily_agg(data, "visibility", lambda v: _m_to_mi(min(v)))
+
     return {
         date: {
-            "high_f": d["temperature_2m_max"][i],
-            "low_f": d["temperature_2m_min"][i],
-            "max_windspeed_mph": d["windspeed_10m_max"][i],
-            "max_windgusts_mph": d["windgusts_10m_max"][i],
+            "high_f":              d["temperature_2m_max"][i],
+            "low_f":               d["temperature_2m_min"][i],
+            "apparent_high_f":     d["apparent_temperature_max"][i],
+            "apparent_low_f":      d["apparent_temperature_min"][i],
+            "max_windspeed_mph":   d["windspeed_10m_max"][i],
+            "max_windgusts_mph":   d["windgusts_10m_max"][i],
+            "snowfall_in":         d["snowfall_sum"][i],
+            "rain_in":             d["rain_sum"][i],
+            "precipitation_in":    d["precipitation_sum"][i],
+            "max_snow_depth_in":   snow_depth_max.get(date),
+            "min_visibility_mi":   visibility_min.get(date),
         }
         for i, date in enumerate(d["time"])
     }
@@ -519,85 +554,74 @@ def _elevation_days(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def _hourly_elevation_snapshot(data: dict[str, Any], idx: int) -> dict[str, Any]:
     h = data["hourly"]
     return {
-        "temperature_f": h["temperature_2m"][idx],
-        "windspeed_mph": h["windspeed_10m"][idx],
-        "windgusts_mph": h["windgusts_10m"][idx],
+        "temperature_f":        h["temperature_2m"][idx],
+        "apparent_temperature_f": h["apparent_temperature"][idx],
+        "windspeed_mph":        h["windspeed_10m"][idx],
+        "windgusts_mph":        h["windgusts_10m"][idx],
+        "snowfall_in":          h["snowfall"][idx],
+        "rain_in":              h["rain"][idx],
+        "precipitation_in":     h["precipitation"][idx],
+        "snow_depth_in":        _m_to_in(h["snow_depth"][idx]),
+        "visibility_mi":        _m_to_mi(h["visibility"][idx]),
     }
 
 
+# ── Main fetch ────────────────────────────────────────────────────────────────
+
 async def fetch_resort_conditions(resort: dict[str, Any]) -> dict[str, Any]:
     lat, lon = resort["latitude"], resort["longitude"]
-    peak_daily = ELEVATION_DAILY_VARS + PEAK_EXTRA_DAILY_VARS
     peak_hourly = ELEVATION_HOURLY_VARS + PEAK_EXTRA_HOURLY_VARS
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    async with httpx.AsyncClient(timeout=20.0) as client:
         base_data, mid_data, peak_data = await asyncio.gather(
             _fetch(client, lat, lon, resort["base_elevation"], ELEVATION_DAILY_VARS, ELEVATION_HOURLY_VARS),
             _fetch(client, lat, lon, resort["mid_elevation"], ELEVATION_DAILY_VARS, ELEVATION_HOURLY_VARS),
-            _fetch(client, lat, lon, resort["peak_elevation"], peak_daily, peak_hourly),
+            _fetch(client, lat, lon, resort["peak_elevation"], ELEVATION_DAILY_VARS, peak_hourly),
         )
 
-    cloud_cover_by_date = _daily_cloud_cover_avgs(peak_data)
     base_days = _elevation_days(base_data)
-    mid_days = _elevation_days(mid_data)
+    mid_days  = _elevation_days(mid_data)
     peak_days = _elevation_days(peak_data)
 
-    peak_d = peak_data["daily"]
-    dates = peak_d["time"]
+    # Cloud cover and freezing level: top-level, not elevation-specific
+    cloud_cover_by_date   = _daily_agg(peak_data, "cloudcover",          lambda v: round(sum(v) / len(v)))
+    freezing_level_by_date = _daily_agg(peak_data, "freezinglevel_height", lambda v: _m_to_ft(sum(v) / len(v)))
+
+    dates = peak_data["daily"]["time"]
 
     forecast = [
         {
             "date": date,
-            "snowfall_in": peak_d["snowfall_sum"][i],
-            "precipitation_in": peak_d["precipitation_sum"][i],
-            "cloud_cover_avg_pct": cloud_cover_by_date.get(date, 0),
-            "base": {
-                "elevation_ft": round(resort["base_elevation"] * 3.28084),
-                **base_days[date],
-            },
-            "mid": {
-                "elevation_ft": round(resort["mid_elevation"] * 3.28084),
-                **mid_days[date],
-            },
-            "peak": {
-                "elevation_ft": round(resort["peak_elevation"] * 3.28084),
-                **peak_days[date],
-            },
+            "cloud_cover_avg_pct":    cloud_cover_by_date.get(date, 0),
+            "avg_freezing_level_ft":  freezing_level_by_date.get(date),
+            "base": {"elevation_ft": round(resort["base_elevation"] * 3.28084), **base_days[date]},
+            "mid":  {"elevation_ft": round(resort["mid_elevation"]  * 3.28084), **mid_days[date]},
+            "peak": {"elevation_ft": round(resort["peak_elevation"] * 3.28084), **peak_days[date]},
         }
         for i, date in enumerate(dates)
     ]
 
-    start = _current_hour_index(peak_data)
+    start  = _current_hour_index(peak_data)
     peak_h = peak_data["hourly"]
-    times = peak_h["time"]
+    times  = peak_h["time"]
 
     next_12_hours = [
         {
-            "time": times[idx],
-            "snowfall_in": peak_h["snowfall"][idx],
-            "precipitation_in": peak_h["precipitation"][idx],
-            "cloud_cover_pct": peak_h["cloudcover"][idx],
-            "base": {
-                "elevation_ft": round(resort["base_elevation"] * 3.28084),
-                **_hourly_elevation_snapshot(base_data, idx),
-            },
-            "mid": {
-                "elevation_ft": round(resort["mid_elevation"] * 3.28084),
-                **_hourly_elevation_snapshot(mid_data, idx),
-            },
-            "peak": {
-                "elevation_ft": round(resort["peak_elevation"] * 3.28084),
-                **_hourly_elevation_snapshot(peak_data, idx),
-            },
+            "time":               times[idx],
+            "cloud_cover_pct":    peak_h["cloudcover"][idx],
+            "freezing_level_ft":  _m_to_ft(peak_h["freezinglevel_height"][idx]),
+            "base": {"elevation_ft": round(resort["base_elevation"] * 3.28084), **_hourly_elevation_snapshot(base_data, idx)},
+            "mid":  {"elevation_ft": round(resort["mid_elevation"]  * 3.28084), **_hourly_elevation_snapshot(mid_data,  idx)},
+            "peak": {"elevation_ft": round(resort["peak_elevation"] * 3.28084), **_hourly_elevation_snapshot(peak_data, idx)},
         }
         for idx in range(start, start + HOURLY_WINDOW)
     ]
 
     return {
-        "resort": resort["name"],
-        "state": resort["state"],
+        "resort":        resort["name"],
+        "state":         resort["state"],
         "next_12_hours": next_12_hours,
-        "forecast": forecast,
+        "forecast":      forecast,
     }
 
 
