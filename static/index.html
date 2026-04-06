@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ski Resort Conditions</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b1120;
+      --surface:   #131e35;
+      --surface2:  #1c2d4a;
+      --border:    #243654;
+      --accent:    #38bdf8;
+      --accent2:   #818cf8;
+      --text:      #e2e8f0;
+      --muted:     #7b91b0;
+      --snow:      #bae6fd;
+      --cold:      #93c5fd;
+      --freeze:    #60a5fa;
+      --warm:      #fb923c;
+      --hot:       #f87171;
+      --good-wind: #4ade80;
+      --bad-wind:  #f87171;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 2rem 1.5rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #0d1829 0%, var(--bg) 100%);
+    }
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    header h1 span { color: var(--accent); }
+    header p { color: var(--muted); margin-top: .35rem; font-size: .9rem; }
+
+    /* ── Search ── */
+    .search-wrap {
+      max-width: 480px;
+      margin: 2.5rem auto 0;
+      padding: 0 1rem;
+      position: relative;
+    }
+    .search-input-row {
+      display: flex;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .6rem 1rem;
+      gap: .5rem;
+      transition: border-color .15s;
+    }
+    .search-input-row:focus-within { border-color: var(--accent); }
+    .search-icon { color: var(--muted); flex-shrink: 0; }
+    #resort-search {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    #resort-search::placeholder { color: var(--muted); }
+    .clear-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      display: none;
+    }
+    .clear-btn.visible { display: block; }
+
+    .dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 1rem; right: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      display: none;
+      z-index: 100;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    }
+    .dropdown.open { display: block; }
+    .dropdown-item {
+      padding: .75rem 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      transition: background .1s;
+    }
+    .dropdown-item:hover, .dropdown-item.active { background: var(--surface2); }
+    .dropdown-item .elev-badge {
+      margin-left: auto;
+      font-size: .75rem;
+      color: var(--muted);
+    }
+    .dropdown-empty {
+      padding: .75rem 1rem;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    /* ── Main content ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 5rem 1rem;
+      color: var(--muted);
+    }
+    .empty-state .big { font-size: 3rem; margin-bottom: .75rem; }
+    .empty-state p { font-size: 1rem; }
+
+    #resort-data { display: none; }
+
+    /* ── Resort header ── */
+    .resort-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .resort-header h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      flex: 1 1 100%;
+    }
+    .elev-pills { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .elev-pill {
+      padding: .3rem .75rem;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+    .elev-pill.base { background: #1e3a2f; color: #4ade80; border: 1px solid #166534; }
+    .elev-pill.mid  { background: #1e3058; color: #93c5fd; border: 1px solid #1d4ed8; }
+    .elev-pill.peak { background: #2d1e58; color: #c4b5fd; border: 1px solid #6d28d9; }
+
+    /* ── Section titles ── */
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 1rem;
+    }
+
+    /* ── Hourly cards ── */
+    .hourly-section { margin-bottom: 2.5rem; }
+    .hourly-scroll {
+      display: flex;
+      gap: .75rem;
+      overflow-x: auto;
+      padding-bottom: .5rem;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .hourly-card {
+      flex: 0 0 160px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: .9rem .85rem;
+      display: flex;
+      flex-direction: column;
+      gap: .6rem;
+    }
+    .hourly-card .h-time {
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .hourly-card .h-icon { font-size: 1.6rem; line-height: 1; }
+    .hourly-card .h-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .3rem .6rem;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+    .hourly-card .h-meta span { white-space: nowrap; }
+    .badge-snow { color: var(--snow); }
+    .badge-rain { color: #7dd3fc; }
+    .badge-cloud { color: #94a3b8; }
+
+    .elev-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .elev-table th {
+      color: var(--muted);
+      font-weight: 500;
+      text-align: right;
+      padding: .15rem .2rem;
+    }
+    .elev-table th:first-child { text-align: left; }
+    .elev-table td {
+      text-align: right;
+      padding: .15rem .2rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .elev-table td:first-child { text-align: left; font-weight: 600; }
+    .elev-table tr.row-base td:first-child { color: #4ade80; }
+    .elev-table tr.row-mid  td:first-child { color: #93c5fd; }
+    .elev-table tr.row-peak td:first-child { color: #c4b5fd; }
+    .elev-table .divider td {
+      border-top: 1px solid var(--border);
+      padding-top: .35rem;
+    }
+
+    /* ── Daily forecast ── */
+    .forecast-section { }
+    .forecast-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    .elev-tabs { display: flex; gap: .35rem; }
+    .elev-tab {
+      padding: .35rem .9rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: none;
+      color: var(--muted);
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .elev-tab:hover { border-color: var(--accent); color: var(--text); }
+    .elev-tab.active.base { background: #1e3a2f; color: #4ade80; border-color: #166534; }
+    .elev-tab.active.mid  { background: #1e3058; color: #93c5fd; border-color: #1d4ed8; }
+    .elev-tab.active.peak { background: #2d1e58; color: #c4b5fd; border-color: #6d28d9; }
+
+    .forecast-grid {
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+    }
+    .day-row {
+      display: grid;
+      grid-template-columns: 110px 1fr 1fr 1fr 1fr 1fr 1fr;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .7rem 1rem;
+      gap: .5rem;
+      font-size: .88rem;
+      transition: background .12s;
+    }
+    .day-row:hover { background: var(--surface2); }
+    .day-row.header-row {
+      background: transparent;
+      border-color: transparent;
+      font-size: .75rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      padding-bottom: .2rem;
+    }
+    .day-date { }
+    .day-date .dow { font-weight: 700; }
+    .day-date .date { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
+    .day-cell { text-align: center; }
+    .day-cell.temp-range {
+      font-variant-numeric: tabular-nums;
+    }
+    .temp-hi { font-weight: 700; }
+    .temp-lo { color: var(--muted); }
+    .snow-val { color: var(--snow); font-weight: 600; }
+    .snow-val.zero { color: var(--muted); font-weight: 400; }
+    .wind-val { font-variant-numeric: tabular-nums; }
+    .cloud-bar-wrap { display: flex; align-items: center; gap: .4rem; justify-content: center; }
+    .cloud-bar {
+      flex: 1; max-width: 48px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .cloud-bar-fill { height: 100%; background: #94a3b8; border-radius: 2px; }
+
+    /* temp color helpers */
+    .t-cold   { color: var(--cold); }
+    .t-freeze { color: var(--freeze); }
+    .t-cool   { color: #a7f3d0; }
+    .t-warm   { color: var(--warm); }
+    .t-hot    { color: var(--hot); }
+
+    /* ── Loading / Error ── */
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--muted);
+    }
+    .spinner {
+      display: inline-block;
+      width: 28px; height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-bottom: .75rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-msg {
+      background: #3b0f0f;
+      border: 1px solid #7f1d1d;
+      color: #fca5a5;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⛷ <span>Ski</span> Conditions</h1>
+  <p>Real-time mountain weather · 12-hour &amp; 16-day forecast</p>
+
+  <div class="search-wrap">
+    <div class="search-input-row">
+      <span class="search-icon">🔍</span>
+      <input id="resort-search" type="text" placeholder="Search for a resort…" autocomplete="off" />
+      <button class="clear-btn" id="clear-btn" title="Clear">✕</button>
+    </div>
+    <div class="dropdown" id="dropdown"></div>
+  </div>
+</header>
+
+<main>
+  <div class="empty-state" id="empty-state">
+    <div class="big">🏔</div>
+    <p>Select a resort above to view conditions</p>
+  </div>
+
+  <div id="resort-data">
+    <div id="content"></div>
+  </div>
+</main>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  let resorts = [];
+  let activeElevTab = 'peak';
+  let currentConditions = null;
+
+  // ── Boot ───────────────────────────────────────────────────────────────
+  async function init() {
+    try {
+      const res = await fetch('/resorts/conditions');
+      resorts = await res.json();
+      renderDropdownItems(resorts);
+    } catch (e) {
+      document.getElementById('empty-state').innerHTML =
+        `<div class="error-msg">Failed to load resorts: ${e.message}</div>`;
+    }
+  }
+
+  // ── Dropdown ───────────────────────────────────────────────────────────
+  const searchEl   = document.getElementById('resort-search');
+  const dropdownEl = document.getElementById('dropdown');
+  const clearBtn   = document.getElementById('clear-btn');
+
+  function renderDropdownItems(list) {
+    if (!list.length) {
+      dropdownEl.innerHTML = '<div class="dropdown-empty">No resorts found</div>';
+      return;
+    }
+    dropdownEl.innerHTML = list.map(r => `
+      <div class="dropdown-item" data-id="${r.id}">
+        <span>⛷</span>
+        <span>${r.name}</span>
+        <span class="elev-badge">Peak ${r.peak_elevation_ft.toLocaleString()} ft</span>
+      </div>
+    `).join('');
+    dropdownEl.querySelectorAll('.dropdown-item').forEach(el => {
+      el.addEventListener('click', () => selectResort(el.dataset.id, el.querySelector('span:nth-child(2)').textContent));
+    });
+  }
+
+  searchEl.addEventListener('focus', () => {
+    renderDropdownItems(filteredResorts());
+    dropdownEl.classList.add('open');
+  });
+
+  searchEl.addEventListener('input', () => {
+    clearBtn.classList.toggle('visible', searchEl.value.length > 0);
+    renderDropdownItems(filteredResorts());
+    dropdownEl.classList.add('open');
+  });
+
+  clearBtn.addEventListener('click', () => {
+    searchEl.value = '';
+    clearBtn.classList.remove('visible');
+    renderDropdownItems(resorts);
+    searchEl.focus();
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrap')) dropdownEl.classList.remove('open');
+  });
+
+  function filteredResorts() {
+    const q = searchEl.value.trim().toLowerCase();
+    return q ? resorts.filter(r => r.name.toLowerCase().includes(q)) : resorts;
+  }
+
+  // ── Select resort ──────────────────────────────────────────────────────
+  async function selectResort(id, name) {
+    dropdownEl.classList.remove('open');
+    searchEl.value = name;
+    clearBtn.classList.add('visible');
+
+    document.getElementById('empty-state').style.display = 'none';
+    const resortData = document.getElementById('resort-data');
+    resortData.style.display = 'block';
+    document.getElementById('content').innerHTML = `
+      <div class="loading"><div class="spinner"></div><br>Loading ${name}…</div>`;
+
+    try {
+      const res = await fetch(`/resorts/${id}/conditions`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      currentConditions = await res.json();
+      const meta = resorts.find(r => r.id === id);
+      renderResort(currentConditions, meta);
+    } catch (e) {
+      document.getElementById('content').innerHTML =
+        `<div class="error-msg">Failed to load conditions for ${name}: ${e.message}</div>`;
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────
+  function renderResort(data, meta) {
+    document.getElementById('content').innerHTML = `
+      <div class="resort-header">
+        <h2>${data.resort}</h2>
+        <div class="elev-pills">
+          <span class="elev-pill base">Base ${meta.base_elevation_ft.toLocaleString()} ft</span>
+          <span class="elev-pill mid">Mid ${meta.mid_elevation_ft.toLocaleString()} ft</span>
+          <span class="elev-pill peak">Peak ${meta.peak_elevation_ft.toLocaleString()} ft</span>
+        </div>
+      </div>
+
+      <div class="hourly-section">
+        <div class="section-title">Next 12 Hours</div>
+        <div class="hourly-scroll" id="hourly-scroll"></div>
+      </div>
+
+      <div class="forecast-section">
+        <div class="forecast-controls">
+          <div class="section-title" style="margin:0">16-Day Forecast</div>
+          <div class="elev-tabs" id="elev-tabs">
+            <button class="elev-tab base ${activeElevTab==='base'?'active':''}" data-elev="base">Base</button>
+            <button class="elev-tab mid  ${activeElevTab==='mid' ?'active':''}" data-elev="mid">Mid</button>
+            <button class="elev-tab peak ${activeElevTab==='peak'?'active':''}" data-elev="peak">Peak</button>
+          </div>
+        </div>
+        <div class="forecast-grid" id="forecast-grid"></div>
+      </div>
+    `;
+
+    renderHourly(data.next_12_hours);
+    renderForecast(data.forecast);
+
+    document.getElementById('elev-tabs').addEventListener('click', e => {
+      const btn = e.target.closest('.elev-tab');
+      if (!btn) return;
+      activeElevTab = btn.dataset.elev;
+      document.querySelectorAll('.elev-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderForecast(currentConditions.forecast);
+    });
+  }
+
+  // ── Hourly cards ───────────────────────────────────────────────────────
+  function renderHourly(hours) {
+    const container = document.getElementById('hourly-scroll');
+    container.innerHTML = hours.map(h => {
+      const d = new Date(h.time + ':00');
+      const timeLabel = d.toLocaleTimeString([], { hour: 'numeric', hour12: true });
+      const icon = weatherIcon(h.snowfall_in, h.precipitation_in, h.cloud_cover_pct);
+      return `
+        <div class="hourly-card">
+          <div class="h-time">${timeLabel}</div>
+          <div class="h-icon">${icon}</div>
+          <div class="h-meta">
+            <span class="badge-cloud">☁ ${h.cloud_cover_pct}%</span>
+            ${h.snowfall_in > 0    ? `<span class="badge-snow">❄ ${h.snowfall_in}"</span>` : ''}
+            ${h.precipitation_in > 0 ? `<span class="badge-rain">💧 ${h.precipitation_in}"</span>` : ''}
+          </div>
+          <table class="elev-table">
+            <thead>
+              <tr>
+                <th></th><th>Temp</th><th>Wind</th><th>Gust</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${elevRow('B', h.base)}
+              ${elevRow('M', h.mid)}
+              ${elevRow('P', h.peak)}
+            </tbody>
+          </table>
+        </div>`;
+    }).join('');
+  }
+
+  function elevRow(label, data) {
+    const rowClass = label === 'B' ? 'row-base' : label === 'M' ? 'row-mid' : 'row-peak';
+    return `
+      <tr class="${rowClass}">
+        <td>${label}</td>
+        <td class="${tempClass(data.temperature_f)}">${data.temperature_f}°</td>
+        <td>${data.windspeed_mph}</td>
+        <td>${data.windgusts_mph}</td>
+      </tr>`;
+  }
+
+  // ── Daily forecast ─────────────────────────────────────────────────────
+  function renderForecast(days) {
+    const grid = document.getElementById('forecast-grid');
+    const elev = activeElevTab;
+    grid.innerHTML = `
+      <div class="day-row header-row">
+        <div>Date</div>
+        <div class="day-cell">High / Low</div>
+        <div class="day-cell">Snowfall</div>
+        <div class="day-cell">Precip</div>
+        <div class="day-cell">Cloud</div>
+        <div class="day-cell">Max Wind</div>
+        <div class="day-cell">Max Gusts</div>
+      </div>
+    ` + days.map(day => {
+      const d = new Date(day.date + 'T12:00:00');
+      const dow = d.toLocaleDateString([], { weekday: 'short' });
+      const date = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const e = day[elev];
+      const snowClass = day.snowfall_in > 0 ? 'snow-val' : 'snow-val zero';
+      return `
+        <div class="day-row">
+          <div class="day-date">
+            <div class="dow">${dow}</div>
+            <div class="date">${date}</div>
+          </div>
+          <div class="day-cell temp-range">
+            <span class="temp-hi ${tempClass(e.high_f)}">${e.high_f}°</span>
+            <span class="temp-lo"> / ${e.low_f}°</span>
+          </div>
+          <div class="day-cell"><span class="${snowClass}">${day.snowfall_in > 0 ? '❄ ' : ''}${day.snowfall_in}"</span></div>
+          <div class="day-cell">${day.precipitation_in > 0 ? '💧 ' : ''}${day.precipitation_in}"</div>
+          <div class="day-cell">
+            <div class="cloud-bar-wrap">
+              <div class="cloud-bar"><div class="cloud-bar-fill" style="width:${day.cloud_cover_avg_pct}%"></div></div>
+              ${day.cloud_cover_avg_pct}%
+            </div>
+          </div>
+          <div class="day-cell wind-val">${e.max_windspeed_mph} mph</div>
+          <div class="day-cell wind-val">${e.max_windgusts_mph} mph</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+  function weatherIcon(snow, rain, cloud) {
+    if (snow > 0)       return '🌨';
+    if (rain > 0)       return '🌧';
+    if (cloud > 70)     return '☁️';
+    if (cloud > 30)     return '⛅';
+    return '☀️';
+  }
+
+  function tempClass(f) {
+    if (f < 20)  return 't-cold';
+    if (f < 32)  return 't-freeze';
+    if (f < 45)  return 't-cool';
+    if (f < 55)  return 't-warm';
+    return 't-hot';
+  }
+
+  init();
+</script>
+</body>
+</html>
