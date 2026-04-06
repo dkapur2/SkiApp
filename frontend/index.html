@@ -381,9 +381,10 @@
 </main>
 
 <script>
-  // Base URL: automatically matches the server that served this page.
-  // Locally → http://localhost:8000   Production → https://skiapp-production-a4ad.up.railway.app
-  const API_BASE = window.location.origin;
+  // Local dev hits the FastAPI server directly; everything else (Vercel) calls Railway.
+  const API_BASE = window.location.hostname === 'localhost'
+    ? 'http://localhost:8000'
+    : 'https://skiapp-production-a4ad.up.railway.app';
 
   // ── State ──────────────────────────────────────────────────────────────
   let resorts = [];
