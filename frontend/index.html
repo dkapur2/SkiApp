@@ -115,6 +115,31 @@
       font-size: .75rem;
       color: var(--muted);
     }
+    /* ── Hourly elevation sections ── */
+    .h-elev-section {
+      padding: .35rem 0 .25rem;
+      border-top: 1px solid var(--border);
+      font-size: .75rem;
+      display: flex;
+      flex-direction: column;
+      gap: .12rem;
+    }
+    .h-elev-label {
+      font-weight: 700;
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .h-elev-section.h-base .h-elev-label { color: #4ade80; }
+    .h-elev-section.h-mid  .h-elev-label { color: #93c5fd; }
+    .h-elev-section.h-peak .h-elev-label { color: #c4b5fd; }
+    .h-elev-ft { font-weight: 400; color: var(--muted); }
+    .h-elev-temp { font-size: .82rem; }
+    .h-feels { color: var(--muted); font-size: .72rem; }
+    .h-elev-wind { color: var(--muted); font-size: .72rem; }
+    .h-elev-precip { font-size: .72rem; color: var(--snow); line-height: 1.5; }
+    .badge-freeze { color: #60a5fa; }
+
     .dropdown-group-header {
       padding: .45rem 1rem .25rem;
       font-size: .7rem;
@@ -277,7 +302,7 @@
     }
     .day-row {
       display: grid;
-      grid-template-columns: 110px 1fr 1fr 1fr 1fr 1fr 1fr;
+      grid-template-columns: 100px repeat(10, 1fr);
       align-items: center;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -542,41 +567,41 @@
     container.innerHTML = hours.map(h => {
       const d = new Date(h.time + ':00');
       const timeLabel = d.toLocaleTimeString([], { hour: 'numeric', hour12: true });
-      const icon = weatherIcon(h.snowfall_in, h.precipitation_in, h.cloud_cover_pct);
+      const icon = weatherIcon(h.peak.snowfall_in, h.peak.rain_in, h.cloud_cover_pct);
+      const freeze = h.freezing_level_ft != null ? h.freezing_level_ft.toLocaleString() + ' ft' : '—';
       return `
         <div class="hourly-card">
           <div class="h-time">${timeLabel}</div>
           <div class="h-icon">${icon}</div>
           <div class="h-meta">
-            <span class="badge-cloud">☁ ${h.cloud_cover_pct}%</span>
-            ${h.snowfall_in > 0    ? `<span class="badge-snow">❄ ${h.snowfall_in}"</span>` : ''}
-            ${h.precipitation_in > 0 ? `<span class="badge-rain">💧 ${h.precipitation_in}"</span>` : ''}
+            <span class="badge-cloud">☁ ${h.cloud_cover_pct ?? '—'}%</span>
+            <span class="badge-freeze">🧊 ${freeze}</span>
           </div>
-          <table class="elev-table">
-            <thead>
-              <tr>
-                <th></th><th>Temp</th><th>Wind</th><th>Gust</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${elevRow('B', h.base)}
-              ${elevRow('M', h.mid)}
-              ${elevRow('P', h.peak)}
-            </tbody>
-          </table>
+          ${elevSection('base', h.base)}
+          ${elevSection('mid',  h.mid)}
+          ${elevSection('peak', h.peak)}
         </div>`;
     }).join('');
   }
 
-  function elevRow(label, data) {
-    const rowClass = label === 'B' ? 'row-base' : label === 'M' ? 'row-mid' : 'row-peak';
+  function elevSection(zone, e) {
+    const label = zone === 'base' ? 'Base' : zone === 'mid' ? 'Mid' : 'Peak';
+    const precipParts = [
+      e.snowfall_in  > 0 ? `❄ ${e.snowfall_in}"` : '',
+      e.rain_in      > 0 ? `💧 ${e.rain_in}"`    : '',
+      e.snow_depth_in != null ? `${e.snow_depth_in}" depth` : '',
+      e.visibility_mi != null ? `${e.visibility_mi}mi vis`  : '',
+    ].filter(Boolean).join(' · ');
     return `
-      <tr class="${rowClass}">
-        <td>${label}</td>
-        <td class="${tempClass(data.temperature_f)}">${data.temperature_f}°</td>
-        <td>${data.windspeed_mph}</td>
-        <td>${data.windgusts_mph}</td>
-      </tr>`;
+      <div class="h-elev-section h-${zone}">
+        <div class="h-elev-label">${label} <span class="h-elev-ft">${e.elevation_ft.toLocaleString()}ft</span></div>
+        <div class="h-elev-temp">
+          <span class="${tempClass(e.temperature_f)}">${e.temperature_f}°</span>
+          <span class="h-feels"> / Feels ${e.apparent_temperature_f}°</span>
+        </div>
+        <div class="h-elev-wind">${e.windspeed_mph} mph · Gusts ${e.windgusts_mph} mph</div>
+        ${precipParts ? `<div class="h-elev-precip">${precipParts}</div>` : ''}
+      </div>`;
   }
 
   // ── Daily forecast ─────────────────────────────────────────────────────
@@ -587,18 +612,23 @@
       <div class="day-row header-row">
         <div>Date</div>
         <div class="day-cell">High / Low</div>
-        <div class="day-cell">Snowfall</div>
-        <div class="day-cell">Precip</div>
+        <div class="day-cell">Feels</div>
+        <div class="day-cell">❄ Snow</div>
+        <div class="day-cell">🌧 Rain</div>
+        <div class="day-cell">Depth</div>
+        <div class="day-cell">Visibility</div>
+        <div class="day-cell">Wind</div>
+        <div class="day-cell">Gusts</div>
         <div class="day-cell">Cloud</div>
-        <div class="day-cell">Max Wind</div>
-        <div class="day-cell">Max Gusts</div>
+        <div class="day-cell">Freeze Level</div>
       </div>
     ` + days.map(day => {
       const d = new Date(day.date + 'T12:00:00');
-      const dow = d.toLocaleDateString([], { weekday: 'short' });
+      const dow  = d.toLocaleDateString([], { weekday: 'short' });
       const date = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
       const e = day[elev];
-      const snowClass = day.snowfall_in > 0 ? 'snow-val' : 'snow-val zero';
+      const snowClass = e.snowfall_in > 0 ? 'snow-val' : 'snow-val zero';
+      const freeze = day.avg_freezing_level_ft != null ? day.avg_freezing_level_ft.toLocaleString() + ' ft' : '—';
       return `
         <div class="day-row">
           <div class="day-date">
@@ -609,26 +639,33 @@
             <span class="temp-hi ${tempClass(e.high_f)}">${e.high_f}°</span>
             <span class="temp-lo"> / ${e.low_f}°</span>
           </div>
-          <div class="day-cell"><span class="${snowClass}">${day.snowfall_in > 0 ? '❄ ' : ''}${day.snowfall_in}"</span></div>
-          <div class="day-cell">${day.precipitation_in > 0 ? '💧 ' : ''}${day.precipitation_in}"</div>
+          <div class="day-cell temp-range">
+            <span class="${tempClass(e.apparent_high_f)}">${e.apparent_high_f}°</span>
+            <span class="temp-lo"> / ${e.apparent_low_f}°</span>
+          </div>
+          <div class="day-cell"><span class="${snowClass}">${e.snowfall_in > 0 ? '❄ ' : ''}${e.snowfall_in}"</span></div>
+          <div class="day-cell">${e.rain_in > 0 ? '🌧 ' : ''}${e.rain_in}"</div>
+          <div class="day-cell">${e.max_snow_depth_in != null ? e.max_snow_depth_in + '"' : '—'}</div>
+          <div class="day-cell">${e.min_visibility_mi != null ? e.min_visibility_mi + ' mi' : '—'}</div>
+          <div class="day-cell wind-val">${e.max_windspeed_mph} mph</div>
+          <div class="day-cell wind-val">${e.max_windgusts_mph} mph</div>
           <div class="day-cell">
             <div class="cloud-bar-wrap">
               <div class="cloud-bar"><div class="cloud-bar-fill" style="width:${day.cloud_cover_avg_pct}%"></div></div>
               ${day.cloud_cover_avg_pct}%
             </div>
           </div>
-          <div class="day-cell wind-val">${e.max_windspeed_mph} mph</div>
-          <div class="day-cell wind-val">${e.max_windgusts_mph} mph</div>
+          <div class="day-cell">${freeze}</div>
         </div>`;
     }).join('');
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────
   function weatherIcon(snow, rain, cloud) {
-    if (snow > 0)       return '🌨';
-    if (rain > 0)       return '🌧';
-    if (cloud > 70)     return '☁️';
-    if (cloud > 30)     return '⛅';
+    if (snow > 0)        return '🌨';
+    if (rain > 0)        return '🌧';
+    if (cloud > 70)      return '☁️';
+    if (cloud > 30)      return '⛅';
     return '☀️';
   }
 
