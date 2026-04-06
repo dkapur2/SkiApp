@@ -114,6 +114,16 @@
       font-size: .75rem;
       color: var(--muted);
     }
+    .dropdown-group-header {
+      padding: .45rem 1rem .25rem;
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--accent);
+      border-top: 1px solid var(--border);
+    }
+    .dropdown-group-header:first-child { border-top: none; }
     .dropdown-empty {
       padding: .75rem 1rem;
       color: var(--muted);
@@ -396,20 +406,37 @@
   const dropdownEl = document.getElementById('dropdown');
   const clearBtn   = document.getElementById('clear-btn');
 
+  const STATE_NAMES = {
+    PA: 'Pennsylvania', MD: 'Maryland', VA: 'Virginia',
+    WV: 'West Virginia', NC: 'North Carolina', TN: 'Tennessee', VT: 'Vermont',
+  };
+
   function renderDropdownItems(list) {
     if (!list.length) {
       dropdownEl.innerHTML = '<div class="dropdown-empty">No resorts found</div>';
       return;
     }
-    dropdownEl.innerHTML = list.map(r => `
-      <div class="dropdown-item" data-id="${r.id}">
-        <span>⛷</span>
-        <span>${r.name}</span>
-        <span class="elev-badge">Peak ${r.peak_elevation_ft.toLocaleString()} ft</span>
-      </div>
-    `).join('');
+
+    // Group by state, preserving the order states first appear in the list
+    const groups = {};
+    for (const r of list) {
+      (groups[r.state] ??= []).push(r);
+    }
+
+    let html = '';
+    for (const [state, resorts] of Object.entries(groups)) {
+      html += `<div class="dropdown-group-header">${STATE_NAMES[state] ?? state}</div>`;
+      html += resorts.map(r => `
+        <div class="dropdown-item" data-id="${r.id}">
+          <span>${r.name}</span>
+          <span class="elev-badge">Peak ${r.peak_elevation_ft.toLocaleString()} ft</span>
+        </div>
+      `).join('');
+    }
+    dropdownEl.innerHTML = html;
+
     dropdownEl.querySelectorAll('.dropdown-item').forEach(el => {
-      el.addEventListener('click', () => selectResort(el.dataset.id, el.querySelector('span:nth-child(2)').textContent));
+      el.addEventListener('click', () => selectResort(el.dataset.id, el.querySelector('span:first-child').textContent.trim()));
     });
   }
 
