@@ -516,6 +516,27 @@ def _current_hour_index(data: dict[str, Any]) -> int:
     return next((i for i, t in enumerate(times) if t == current_hour_str), 0)
 
 
+# Inches of snow depth per inch of liquid water (standard 10:1 ratio)
+_SNOW_WATER_RATIO = 10.0
+
+
+def _phase_correct(
+    precip: float | None,
+    temp_f: float | None,
+) -> tuple[float, float]:
+    """Return (snowfall_in, rain_in) redistributed from total precip based on temperature.
+
+    Uses a linear blend across the 32–34 °F mixed-phase zone.
+    snowfall is returned as snow depth inches (precip × snow-water ratio).
+    rain is returned as liquid inches.
+    """
+    if not precip or temp_f is None:
+        return 0.0, 0.0
+    rain_frac = max(0.0, min(1.0, (temp_f - 32.0) / 2.0))
+    snow_frac = 1.0 - rain_frac
+    return round(precip * snow_frac * _SNOW_WATER_RATIO, 2), round(precip * rain_frac, 3)
+
+
 def _daily_agg(data: dict[str, Any], var: str, fn) -> dict[str, Any]:
     """Bucket hourly values by date, apply fn to each bucket, skip Nones."""
     times = data["hourly"]["time"]
@@ -533,36 +554,41 @@ def _elevation_days(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     snow_depth_max = _daily_agg(data, "snow_depth", lambda v: _m_to_in(max(v)))
     visibility_min = _daily_agg(data, "visibility", lambda v: _m_to_mi(min(v)))
 
-    return {
-        date: {
-            "high_f":              d["temperature_2m_max"][i],
-            "low_f":               d["temperature_2m_min"][i],
-            "apparent_high_f":     d["apparent_temperature_max"][i],
-            "apparent_low_f":      d["apparent_temperature_min"][i],
-            "max_windspeed_mph":   d["windspeed_10m_max"][i],
-            "max_windgusts_mph":   d["windgusts_10m_max"][i],
-            "snowfall_in":         d["snowfall_sum"][i],
-            "rain_in":             d["rain_sum"][i],
-            "precipitation_in":    d["precipitation_sum"][i],
-            "max_snow_depth_in":   snow_depth_max.get(date),
-            "min_visibility_mi":   visibility_min.get(date),
+    result = {}
+    for i, date in enumerate(d["time"]):
+        hi, lo = d["temperature_2m_max"][i], d["temperature_2m_min"][i]
+        mean_temp = (hi + lo) / 2 if hi is not None and lo is not None else None
+        snowfall, rain = _phase_correct(d["precipitation_sum"][i], mean_temp)
+        result[date] = {
+            "high_f":            d["temperature_2m_max"][i],
+            "low_f":             d["temperature_2m_min"][i],
+            "apparent_high_f":   d["apparent_temperature_max"][i],
+            "apparent_low_f":    d["apparent_temperature_min"][i],
+            "max_windspeed_mph": d["windspeed_10m_max"][i],
+            "max_windgusts_mph": d["windgusts_10m_max"][i],
+            "snowfall_in":       snowfall,
+            "rain_in":           rain,
+            "precipitation_in":  d["precipitation_sum"][i],
+            "max_snow_depth_in": snow_depth_max.get(date),
+            "min_visibility_mi": visibility_min.get(date),
         }
-        for i, date in enumerate(d["time"])
-    }
+    return result
 
 
 def _hourly_elevation_snapshot(data: dict[str, Any], idx: int) -> dict[str, Any]:
     h = data["hourly"]
+    temp = h["temperature_2m"][idx]
+    snowfall, rain = _phase_correct(h["precipitation"][idx], temp)
     return {
-        "temperature_f":        h["temperature_2m"][idx],
+        "temperature_f":          temp,
         "apparent_temperature_f": h["apparent_temperature"][idx],
-        "windspeed_mph":        h["windspeed_10m"][idx],
-        "windgusts_mph":        h["windgusts_10m"][idx],
-        "snowfall_in":          h["snowfall"][idx],
-        "rain_in":              h["rain"][idx],
-        "precipitation_in":     h["precipitation"][idx],
-        "snow_depth_in":        _m_to_in(h["snow_depth"][idx]),
-        "visibility_mi":        _m_to_mi(h["visibility"][idx]),
+        "windspeed_mph":          h["windspeed_10m"][idx],
+        "windgusts_mph":          h["windgusts_10m"][idx],
+        "snowfall_in":            snowfall,
+        "rain_in":                rain,
+        "precipitation_in":       h["precipitation"][idx],
+        "snow_depth_in":          _m_to_in(h["snow_depth"][idx]),
+        "visibility_mi":          _m_to_mi(h["visibility"][idx]),
     }
 
 
