@@ -1,10 +1,22 @@
 import os
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from resorts import fetch_conditions_by_id, get_all_resort_metadata
 
 app = FastAPI(title="Ski Resort Conditions API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://dkapur.com",
+        "https://www.dkapur.com",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/resorts/conditions")

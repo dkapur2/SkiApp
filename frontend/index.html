@@ -370,6 +370,10 @@
 </main>
 
 <script>
+  // Base URL: automatically matches the server that served this page.
+  // Locally → http://localhost:8000   Production → https://skiapp-production-a4ad.up.railway.app
+  const API_BASE = window.location.origin;
+
   // ── State ──────────────────────────────────────────────────────────────
   let resorts = [];
   let activeElevTab = 'peak';
@@ -378,7 +382,7 @@
   // ── Boot ───────────────────────────────────────────────────────────────
   async function init() {
     try {
-      const res = await fetch('/resorts/conditions');
+      const res = await fetch(`${API_BASE}/resorts/conditions`);
       resorts = await res.json();
       renderDropdownItems(resorts);
     } catch (e) {
@@ -449,7 +453,7 @@
       <div class="loading"><div class="spinner"></div><br>Loading ${name}…</div>`;
 
     try {
-      const res = await fetch(`/resorts/${id}/conditions`);
+      const res = await fetch(`${API_BASE}/resorts/${id}/conditions`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       currentConditions = await res.json();
       const meta = resorts.find(r => r.id === id);
