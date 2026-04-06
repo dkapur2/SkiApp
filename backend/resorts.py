@@ -498,8 +498,8 @@ def _daily_cloud_cover_avgs(data: dict[str, Any]) -> dict[str, int]:
     values = data["hourly"]["cloudcover"]
     buckets: dict[str, list[int]] = {}
     for t, v in zip(times, values):
-        date = t[:10]
-        buckets.setdefault(date, []).append(v)
+        if v is not None:
+            buckets.setdefault(t[:10], []).append(v)
     return {date: round(sum(vals) / len(vals)) for date, vals in buckets.items()}
 
 
