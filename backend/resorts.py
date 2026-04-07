@@ -1813,9 +1813,24 @@ def _hourly_elevation_snapshot(data: dict[str, Any], idx: int) -> dict[str, Any]
     }
 
 
+# ── Response cache ────────────────────────────────────────────────────────────
+
+import time as _time
+
+_CACHE_TTL = 1800  # seconds — refresh data at most once per 30 min per resort
+_conditions_cache: dict[str, tuple[dict, float]] = {}
+
+
 # ── Main fetch ────────────────────────────────────────────────────────────────
 
 async def fetch_resort_conditions(resort: dict[str, Any]) -> dict[str, Any]:
+    cache_key = resort["id"]
+    cached = _conditions_cache.get(cache_key)
+    if cached is not None:
+        data, ts = cached
+        if _time.monotonic() - ts < _CACHE_TTL:
+            return data
+
     lat, lon = resort["latitude"], resort["longitude"]
     all_hourly = ELEVATION_HOURLY_VARS + PEAK_EXTRA_HOURLY_VARS
 
@@ -1865,12 +1880,14 @@ async def fetch_resort_conditions(resort: dict[str, Any]) -> dict[str, Any]:
         for idx in range(start, start + HOURLY_WINDOW)
     ]
 
-    return {
+    result = {
         "resort":        resort["name"],
         "state":         resort["state"],
         "next_12_hours": next_12_hours,
         "forecast":      forecast,
     }
+    _conditions_cache[cache_key] = (result, _time.monotonic())
+    return result
 
 
 def get_all_resort_metadata() -> list[dict[str, Any]]:
