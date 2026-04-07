@@ -1658,6 +1658,29 @@ def _m_to_ft(v: float | None) -> int | None:
 
 # ── API fetch ─────────────────────────────────────────────────────────────────
 
+# Standard environmental lapse rate: 6.5 °C / 1 000 m → in °F per metre
+_LAPSE_RATE_F_PER_M = (6.5 / 1000.0) * 1.8  # ≈ 0.01170 °F/m
+
+
+def _apply_lapse_rate(data: dict, offset_f: float) -> None:
+    """Shift all temperature fields in *data* by *offset_f* degrees Fahrenheit."""
+    for var in ("temperature_2m", "apparent_temperature"):
+        arr = data.get("hourly", {}).get(var)
+        if arr is not None:
+            data["hourly"][var] = [
+                round(v + offset_f, 1) if v is not None else None for v in arr
+            ]
+    for var in (
+        "temperature_2m_max", "temperature_2m_min",
+        "apparent_temperature_max", "apparent_temperature_min",
+    ):
+        arr = data.get("daily", {}).get(var)
+        if arr is not None:
+            data["daily"][var] = [
+                round(v + offset_f, 1) if v is not None else None for v in arr
+            ]
+
+
 async def _fetch(
     client: httpx.AsyncClient,
     lat: float,
@@ -1679,6 +1702,20 @@ async def _fetch(
         "timezone": "auto",
     }
     response = await client.get(OPEN_METEO_URL, params=params)
+    if response.status_code in (502, 503, 504):
+        # Open-Meteo rejects elevation overrides that fall outside its terrain
+        # model's expected range. Retry without the override, then manually
+        # apply the standard lapse rate so temperatures remain differentiated
+        # across base / mid / peak.
+        params_fallback = {k: v for k, v in params.items() if k != "elevation"}
+        response = await client.get(OPEN_METEO_URL, params=params_fallback)
+        response.raise_for_status()
+        data = response.json()
+        model_elev = data.get("elevation", elevation)
+        offset_f = (model_elev - elevation) * _LAPSE_RATE_F_PER_M
+        if abs(offset_f) > 0.01:
+            _apply_lapse_rate(data, offset_f)
+        return data
     response.raise_for_status()
     return response.json()
 
