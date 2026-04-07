@@ -1689,10 +1689,13 @@ async def _fetch(
     daily_vars: list[str],
     hourly_vars: list[str],
 ) -> dict[str, Any]:
+    # Never send the elevation override — Open-Meteo 502s when the specified
+    # value falls outside its terrain model's range for the grid cell.
+    # Instead, fetch at the model's native terrain elevation and apply the
+    # standard lapse rate ourselves to reach the target elevation.
     params: dict[str, Any] = {
         "latitude": lat,
         "longitude": lon,
-        "elevation": elevation,
         "daily": ",".join(daily_vars),
         "hourly": ",".join(hourly_vars),
         "temperature_unit": "fahrenheit",
@@ -1702,22 +1705,13 @@ async def _fetch(
         "timezone": "auto",
     }
     response = await client.get(OPEN_METEO_URL, params=params)
-    if response.status_code in (502, 503, 504):
-        # Open-Meteo rejects elevation overrides that fall outside its terrain
-        # model's expected range. Retry without the override, then manually
-        # apply the standard lapse rate so temperatures remain differentiated
-        # across base / mid / peak.
-        params_fallback = {k: v for k, v in params.items() if k != "elevation"}
-        response = await client.get(OPEN_METEO_URL, params=params_fallback)
-        response.raise_for_status()
-        data = response.json()
-        model_elev = data.get("elevation", elevation)
-        offset_f = (model_elev - elevation) * _LAPSE_RATE_F_PER_M
-        if abs(offset_f) > 0.01:
-            _apply_lapse_rate(data, offset_f)
-        return data
     response.raise_for_status()
-    return response.json()
+    data = response.json()
+    model_elev = data.get("elevation", elevation)
+    offset_f = (model_elev - elevation) * _LAPSE_RATE_F_PER_M
+    if abs(offset_f) > 0.01:
+        _apply_lapse_rate(data, offset_f)
+    return data
 
 
 # ── Hourly → daily aggregation helpers ────────────────────────────────────────
