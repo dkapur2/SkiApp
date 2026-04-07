@@ -1662,37 +1662,46 @@ def _m_to_ft(v: float | None) -> int | None:
 _LAPSE_RATE_F_PER_M = (6.5 / 1000.0) * 1.8  # ≈ 0.01170 °F/m
 
 
-def _apply_lapse_rate(data: dict, offset_f: float) -> None:
-    """Shift all temperature fields in *data* by *offset_f* degrees Fahrenheit."""
+def _at_elevation(raw: dict, model_elev: float, target_elev: int) -> dict:
+    """Return a copy of *raw* with temperatures shifted for *target_elev*.
+
+    Only temperature lists are rebuilt; all other arrays are shared by reference
+    to avoid deep-copying megabytes of weather data.
+    """
+    offset_f = (model_elev - target_elev) * _LAPSE_RATE_F_PER_M
+    if abs(offset_f) <= 0.01:
+        return raw
+
+    def shift(arr: list) -> list:
+        return [round(v + offset_f, 1) if v is not None else None for v in arr]
+
+    hourly = dict(raw["hourly"])
     for var in ("temperature_2m", "apparent_temperature"):
-        arr = data.get("hourly", {}).get(var)
-        if arr is not None:
-            data["hourly"][var] = [
-                round(v + offset_f, 1) if v is not None else None for v in arr
-            ]
+        if var in hourly:
+            hourly[var] = shift(hourly[var])
+
+    daily = dict(raw["daily"])
     for var in (
         "temperature_2m_max", "temperature_2m_min",
         "apparent_temperature_max", "apparent_temperature_min",
     ):
-        arr = data.get("daily", {}).get(var)
-        if arr is not None:
-            data["daily"][var] = [
-                round(v + offset_f, 1) if v is not None else None for v in arr
-            ]
+        if var in daily:
+            daily[var] = shift(daily[var])
+
+    return {**raw, "hourly": hourly, "daily": daily}
 
 
 async def _fetch(
     client: httpx.AsyncClient,
     lat: float,
     lon: float,
-    elevation: int,
     daily_vars: list[str],
     hourly_vars: list[str],
 ) -> dict[str, Any]:
-    # Never send the elevation override — Open-Meteo 502s when the specified
-    # value falls outside its terrain model's range for the grid cell.
-    # Instead, fetch at the model's native terrain elevation and apply the
-    # standard lapse rate ourselves to reach the target elevation.
+    """Single Open-Meteo request — no elevation override (avoids 502s).
+
+    Callers use _at_elevation() to derive per-elevation views in memory.
+    """
     params: dict[str, Any] = {
         "latitude": lat,
         "longitude": lon,
@@ -1706,12 +1715,7 @@ async def _fetch(
     }
     response = await client.get(OPEN_METEO_URL, params=params)
     response.raise_for_status()
-    data = response.json()
-    model_elev = data.get("elevation", elevation)
-    offset_f = (model_elev - elevation) * _LAPSE_RATE_F_PER_M
-    if abs(offset_f) > 0.01:
-        _apply_lapse_rate(data, offset_f)
-    return data
+    return response.json()
 
 
 # ── Hourly → daily aggregation helpers ────────────────────────────────────────
@@ -1804,14 +1808,15 @@ def _hourly_elevation_snapshot(data: dict[str, Any], idx: int) -> dict[str, Any]
 
 async def fetch_resort_conditions(resort: dict[str, Any]) -> dict[str, Any]:
     lat, lon = resort["latitude"], resort["longitude"]
-    peak_hourly = ELEVATION_HOURLY_VARS + PEAK_EXTRA_HOURLY_VARS
+    all_hourly = ELEVATION_HOURLY_VARS + PEAK_EXTRA_HOURLY_VARS
 
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        base_data, mid_data, peak_data = await asyncio.gather(
-            _fetch(client, lat, lon, resort["base_elevation"], ELEVATION_DAILY_VARS, ELEVATION_HOURLY_VARS),
-            _fetch(client, lat, lon, resort["mid_elevation"], ELEVATION_DAILY_VARS, ELEVATION_HOURLY_VARS),
-            _fetch(client, lat, lon, resort["peak_elevation"], ELEVATION_DAILY_VARS, peak_hourly),
-        )
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        raw = await _fetch(client, lat, lon, ELEVATION_DAILY_VARS, all_hourly)
+
+    model_elev: float = raw.get("elevation", resort["mid_elevation"])
+    base_data = _at_elevation(raw, model_elev, resort["base_elevation"])
+    mid_data  = _at_elevation(raw, model_elev, resort["mid_elevation"])
+    peak_data = _at_elevation(raw, model_elev, resort["peak_elevation"])
 
     base_days = _elevation_days(base_data)
     mid_days  = _elevation_days(mid_data)
