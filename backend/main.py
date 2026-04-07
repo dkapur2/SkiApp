@@ -1,12 +1,28 @@
+import asyncio
 import os
 import traceback
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from resorts import fetch_conditions_by_id, get_all_resort_metadata
+from resorts import RESORTS, fetch_conditions_by_id, fetch_resort_conditions, get_all_resort_metadata
 
 app = FastAPI(title="Ski Resort Conditions API")
+
+
+async def _warm_cache():
+    """Pre-fetch every resort into the cache on startup, one every 0.5 s."""
+    for resort in RESORTS:
+        try:
+            await fetch_resort_conditions(resort)
+        except Exception:
+            pass  # failed resorts will be retried on first user click
+        await asyncio.sleep(0.5)
+
+
+@app.on_event("startup")
+async def startup():
+    asyncio.create_task(_warm_cache())
 
 app.add_middleware(
     CORSMiddleware,
