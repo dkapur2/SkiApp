@@ -11,13 +11,17 @@ app = FastAPI(title="Ski Resort Conditions API")
 
 
 async def _warm_cache():
-    """Pre-fetch every resort into the cache on startup, one every 0.5 s."""
+    """Pre-fetch every resort into the cache on startup, one every 2 s.
+
+    Slow enough to stay well under Open-Meteo's free-tier rate limit while
+    still warming all 158 resorts within ~5 minutes of startup.
+    """
     for resort in RESORTS:
         try:
             await fetch_resort_conditions(resort)
         except Exception:
             pass  # failed resorts will be retried on first user click
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(2.0)
 
 
 @app.on_event("startup")
