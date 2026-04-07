@@ -1,4 +1,5 @@
 import os
+import traceback
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,7 +30,8 @@ async def get_resort_conditions(resort_id: str):
     try:
         conditions = await fetch_conditions_by_id(resort_id)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch conditions: {e}")
+        traceback.print_exc()   # full stack trace → Railway logs
+        raise HTTPException(status_code=502, detail=f"{type(e).__name__}: {e}")
     if conditions is None:
         raise HTTPException(status_code=404, detail=f"Resort '{resort_id}' not found")
     return conditions

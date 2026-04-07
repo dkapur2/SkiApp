@@ -1700,6 +1700,7 @@ async def _fetch(
 ) -> dict[str, Any]:
     """Single Open-Meteo request — no elevation override (avoids 502s).
 
+    Retries up to 3 times with exponential back-off on any transient error.
     Callers use _at_elevation() to derive per-elevation views in memory.
     """
     params: dict[str, Any] = {
@@ -1713,9 +1714,17 @@ async def _fetch(
         "forecast_days": FORECAST_DAYS,
         "timezone": "auto",
     }
-    response = await client.get(OPEN_METEO_URL, params=params)
-    response.raise_for_status()
-    return response.json()
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            response = await client.get(OPEN_METEO_URL, params=params)
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            last_error = exc
+            if attempt < 2:
+                await asyncio.sleep(2 ** attempt)  # 1 s, then 2 s
+    raise last_error  # type: ignore[misc]
 
 
 # ── Hourly → daily aggregation helpers ────────────────────────────────────────
