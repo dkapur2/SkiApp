@@ -37,7 +37,7 @@ app.add_middleware(
         "https://www.dkapur.com",
     ],
     allow_origin_regex=r"https://.*\.vercel\.app",
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -98,6 +98,7 @@ async def recommend(conditions: ResortConditions):
             messages=[{"role": "user", "content": user_message}],
         )
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=502, detail=f"Anthropic API error: {e}")
 
     recommendation = message.content[0].text
