@@ -3,56 +3,86 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ski Resort Conditions</title>
+  <title>Ski Conditions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0b1120;
-      --surface:   #131e35;
-      --surface2:  #1c2d4a;
-      --border:    #243654;
-      --accent:    #38bdf8;
-      --accent2:   #818cf8;
-      --text:      #e2e8f0;
-      --muted:     #7b91b0;
-      --snow:      #bae6fd;
-      --cold:      #93c5fd;
-      --freeze:    #60a5fa;
-      --warm:      #fb923c;
-      --hot:       #f87171;
-      --good-wind: #4ade80;
-      --bad-wind:  #f87171;
+      --bg:          #070d1b;
+      --surface:     rgba(255,255,255,0.04);
+      --surface2:    rgba(255,255,255,0.07);
+      --border:      rgba(255,255,255,0.09);
+      --accent:      #38bdf8;
+      --accent-dim:  rgba(56,189,248,0.15);
+      --purple:      #818cf8;
+      --text:        #f1f5f9;
+      --text2:       #cbd5e1;
+      --muted:       #64748b;
+      --snow:        #bae6fd;
+      --cold:        #93c5fd;
+      --freeze:      #60a5fa;
+      --cool:        #a7f3d0;
+      --warm:        #fb923c;
+      --hot:         #f87171;
+      --green:       #4ade80;
     }
+
+    html { scroll-behavior: smooth; }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Header ── */
+    /* ── Header ──────────────────────────────────────────────────────────── */
     header {
-      padding: 2rem 1.5rem 1.5rem;
-      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: rgba(7,13,27,0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
-      background: linear-gradient(180deg, #0d1829 0%, var(--bg) 100%);
     }
-    header h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -.04em;
+      white-space: nowrap;
+      flex-shrink: 0;
       color: var(--text);
     }
-    header h1 span { color: var(--accent); }
-    header p { color: var(--muted); margin-top: .35rem; font-size: .9rem; }
+    .logo em { font-style: normal; color: var(--accent); }
+    .logo-sub {
+      font-size: .65rem;
+      font-weight: 500;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-left: .1rem;
+    }
 
-    /* ── Search ── */
+    /* ── Search ──────────────────────────────────────────────────────────── */
     .search-wrap {
-      max-width: 480px;
-      margin: 2.5rem auto 0;
-      padding: 0 1rem;
+      flex: 1;
+      max-width: 400px;
       position: relative;
     }
     .search-input-row {
@@ -61,215 +91,326 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: .6rem 1rem;
+      padding: .55rem 1rem;
       gap: .5rem;
-      transition: border-color .15s;
+      transition: border-color .2s, box-shadow .2s;
     }
-    .search-input-row:focus-within { border-color: var(--accent); }
-    .search-icon { color: var(--muted); flex-shrink: 0; }
+    .search-input-row:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .search-icon { color: var(--muted); flex-shrink: 0; font-size: .9rem; }
     #resort-search {
       flex: 1;
       background: none;
       border: none;
       outline: none;
       color: var(--text);
-      font-size: 1rem;
+      font-size: .9rem;
+      font-family: inherit;
     }
     #resort-search::placeholder { color: var(--muted); }
     .clear-btn {
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 1.1rem;
-      line-height: 1;
-      display: none;
+      background: none; border: none;
+      color: var(--muted); cursor: pointer;
+      font-size: .95rem; line-height: 1;
+      display: none; padding: 0;
+      transition: color .15s;
     }
+    .clear-btn:hover { color: var(--text); }
     .clear-btn.visible { display: block; }
 
     .dropdown {
       position: absolute;
-      top: calc(100% + 6px);
-      left: 1rem; right: 1rem;
-      background: var(--surface);
+      top: calc(100% + 8px);
+      left: 0; right: 0;
+      background: #0d1727;
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
       overflow-y: auto;
-      max-height: 320px;
+      max-height: 340px;
       display: none;
-      z-index: 100;
-      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      z-index: 300;
+      box-shadow: 0 24px 64px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,0.04);
     }
     .dropdown.open { display: block; }
     .dropdown-item {
-      padding: .75rem 1rem;
+      padding: .65rem 1rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: .75rem;
       transition: background .1s;
+      font-size: .88rem;
     }
-    .dropdown-item:hover, .dropdown-item.active { background: var(--surface2); }
-    .dropdown-item .elev-badge {
-      margin-left: auto;
-      font-size: .75rem;
-      color: var(--muted);
-    }
-    /* ── Hourly elevation sections ── */
-    .h-elev-section {
-      padding: .35rem 0 .25rem;
-      border-top: 1px solid var(--border);
-      font-size: .75rem;
-      display: flex;
-      flex-direction: column;
-      gap: .12rem;
-    }
-    .h-elev-label {
-      font-weight: 700;
-      font-size: .72rem;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-    }
-    .h-elev-section.h-base .h-elev-label { color: #4ade80; }
-    .h-elev-section.h-mid  .h-elev-label { color: #93c5fd; }
-    .h-elev-section.h-peak .h-elev-label { color: #c4b5fd; }
-    .h-elev-ft { font-weight: 400; color: var(--muted); }
-    .h-elev-temp { font-size: .82rem; }
-    .h-feels { color: var(--muted); font-size: .72rem; }
-    .h-elev-wind { color: var(--muted); font-size: .72rem; }
-    .h-elev-precip { font-size: .72rem; color: var(--snow); line-height: 1.5; }
-    .badge-freeze { color: #60a5fa; }
-
+    .dropdown-item:hover { background: var(--surface2); }
+    .dropdown-item .elev-badge { margin-left: auto; font-size: .72rem; color: var(--muted); }
     .dropdown-group-header {
-      padding: .45rem 1rem .25rem;
-      font-size: .7rem;
+      padding: .5rem 1rem .3rem;
+      font-size: .68rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .09em;
+      letter-spacing: .1em;
       color: var(--accent);
       border-top: 1px solid var(--border);
     }
     .dropdown-group-header:first-child { border-top: none; }
-    .dropdown-empty {
-      padding: .75rem 1rem;
-      color: var(--muted);
-      font-size: .9rem;
-    }
+    .dropdown-empty { padding: 1rem; color: var(--muted); font-size: .9rem; text-align: center; }
 
-    /* ── Main content ── */
+    /* ── Main ────────────────────────────────────────────────────────────── */
     main {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 2rem 1rem 4rem;
+      padding: 3rem 1.5rem 6rem;
     }
 
+    /* ── Empty state ──────────────────────────────────────────────────────── */
     .empty-state {
       text-align: center;
-      padding: 5rem 1rem;
+      padding: 7rem 1rem 4rem;
       color: var(--muted);
     }
-    .empty-state .big { font-size: 3rem; margin-bottom: .75rem; }
-    .empty-state p { font-size: 1rem; }
+    .empty-state .big {
+      font-size: 4.5rem;
+      margin-bottom: 1.25rem;
+      filter: drop-shadow(0 0 32px rgba(56,189,248,0.25));
+    }
+    .empty-state h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -.03em;
+      color: var(--text2);
+      margin-bottom: .5rem;
+    }
+    .empty-state p { font-size: .95rem; }
 
     #resort-data { display: none; }
 
-    /* ── Resort header ── */
-    .resort-header {
+    /* ── Resort hero ──────────────────────────────────────────────────────── */
+    .resort-hero {
+      margin-bottom: 2.5rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .resort-hero-top {
       display: flex;
-      flex-wrap: wrap;
       align-items: flex-start;
-      gap: 1rem;
-      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem 1.5rem;
+      margin-bottom: 1.25rem;
     }
-    .resort-header h2 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      flex: 1 1 100%;
+    .resort-hero-name { flex: 1 1 auto; }
+    .resort-hero-name h2 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -.05em;
+      line-height: 1.1;
+      background: linear-gradient(135deg, var(--text) 0%, var(--text2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
-    .elev-pills { display: flex; gap: .5rem; flex-wrap: wrap; }
-    .elev-pill {
-      padding: .3rem .75rem;
-      border-radius: 999px;
-      font-size: .8rem;
+    .state-badge {
+      display: inline-block;
+      margin-top: .5rem;
+      padding: .22rem .65rem;
+      border-radius: 6px;
+      font-size: .72rem;
       font-weight: 600;
-    }
-    .elev-pill.base { background: #1e3a2f; color: #4ade80; border: 1px solid #166534; }
-    .elev-pill.mid  { background: #1e3058; color: #93c5fd; border: 1px solid #1d4ed8; }
-    .elev-pill.peak { background: #2d1e58; color: #c4b5fd; border: 1px solid #6d28d9; }
-
-    /* ── Section titles ── */
-    .section-title {
-      font-size: 1.05rem;
-      font-weight: 600;
+      background: var(--surface2);
+      border: 1px solid var(--border);
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: .08em;
+    }
+    .resort-hero-actions { flex-shrink: 0; }
+
+    .elev-pills { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .elev-pill {
+      padding: .35rem .9rem;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .01em;
+    }
+    .elev-pill.base { background: rgba(74,222,128,0.1);  color: var(--green); border: 1px solid rgba(74,222,128,0.22); }
+    .elev-pill.mid  { background: rgba(147,197,253,0.1); color: var(--cold);  border: 1px solid rgba(147,197,253,0.22); }
+    .elev-pill.peak { background: rgba(196,181,253,0.1); color: #c4b5fd;      border: 1px solid rgba(196,181,253,0.22); }
+
+    /* ── AI Button ────────────────────────────────────────────────────────── */
+    .ai-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .7rem 1.4rem;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+      color: #fff;
+      font-size: .9rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 24px rgba(56,189,248,0.22);
+      white-space: nowrap;
+      letter-spacing: -.01em;
+    }
+    .ai-btn:hover {
+      opacity: .9;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 32px rgba(56,189,248,0.35);
+    }
+    .ai-btn:active { transform: translateY(0); }
+    .ai-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── AI Response Panel ────────────────────────────────────────────────── */
+    .ai-panel {
+      display: none;
+      margin-top: 1.5rem;
+    }
+    .ai-panel.visible {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      background: linear-gradient(135deg, rgba(56,189,248,0.05) 0%, rgba(129,140,248,0.05) 100%);
+      border: 1px solid rgba(56,189,248,0.18);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      animation: slideDown .25s ease;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .ai-avatar {
+      flex-shrink: 0;
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(56,189,248,0.25);
+    }
+    .ai-body { flex: 1; min-width: 0; }
+    .ai-label {
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--accent);
+      margin-bottom: .45rem;
+    }
+    .ai-text {
+      font-size: .95rem;
+      line-height: 1.7;
+      color: var(--text2);
+    }
+    .ai-loading {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+    .ai-spinner {
+      width: 15px; height: 15px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+      flex-shrink: 0;
+    }
+    .ai-error { color: #f87171; font-size: .9rem; line-height: 1.6; }
+
+    /* ── Section titles ───────────────────────────────────────────────────── */
+    .section-title {
+      font-size: .7rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .12em;
       margin-bottom: 1rem;
     }
 
-    /* ── Hourly cards ── */
-    .hourly-section { margin-bottom: 2.5rem; }
+    /* ── Hourly cards ─────────────────────────────────────────────────────── */
+    .hourly-section { margin-bottom: 3rem; }
     .hourly-scroll {
       display: flex;
       gap: .75rem;
       overflow-x: auto;
-      padding-bottom: .5rem;
+      padding-bottom: .75rem;
+      scroll-snap-type: x mandatory;
       scrollbar-width: thin;
       scrollbar-color: var(--border) transparent;
     }
+    .hourly-scroll::-webkit-scrollbar { height: 4px; }
+    .hourly-scroll::-webkit-scrollbar-track { background: transparent; }
+    .hourly-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
     .hourly-card {
-      flex: 0 0 160px;
+      flex: 0 0 165px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: .9rem .85rem;
+      border-radius: 14px;
+      padding: 1rem;
       display: flex;
       flex-direction: column;
-      gap: .6rem;
+      gap: .55rem;
+      scroll-snap-align: start;
+      transition: border-color .15s, background .15s;
     }
-    .hourly-card .h-time {
-      font-size: .8rem;
-      font-weight: 600;
+    .hourly-card:hover {
+      border-color: rgba(56,189,248,0.22);
+      background: var(--surface2);
+    }
+    .h-time {
+      font-size: .7rem;
+      font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
+      letter-spacing: .08em;
     }
-    .hourly-card .h-icon { font-size: 1.6rem; line-height: 1; }
-    .hourly-card .h-meta {
+    .h-icon { font-size: 1.7rem; line-height: 1; }
+    .h-meta {
       display: flex;
       flex-wrap: wrap;
-      gap: .3rem .6rem;
-      font-size: .78rem;
+      gap: .2rem .45rem;
+      font-size: .73rem;
       color: var(--muted);
     }
-    .hourly-card .h-meta span { white-space: nowrap; }
-    .badge-snow { color: var(--snow); }
-    .badge-rain { color: #7dd3fc; }
-    .badge-cloud { color: #94a3b8; }
+    .h-meta span { white-space: nowrap; }
+    .badge-freeze { color: var(--freeze); }
+    .badge-snow   { color: var(--snow); }
+    .badge-rain   { color: #7dd3fc; }
+    .badge-cloud  { color: var(--muted); }
 
-    .elev-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
-    .elev-table th {
-      color: var(--muted);
-      font-weight: 500;
-      text-align: right;
-      padding: .15rem .2rem;
-    }
-    .elev-table th:first-child { text-align: left; }
-    .elev-table td {
-      text-align: right;
-      padding: .15rem .2rem;
-      font-variant-numeric: tabular-nums;
-    }
-    .elev-table td:first-child { text-align: left; font-weight: 600; }
-    .elev-table tr.row-base td:first-child { color: #4ade80; }
-    .elev-table tr.row-mid  td:first-child { color: #93c5fd; }
-    .elev-table tr.row-peak td:first-child { color: #c4b5fd; }
-    .elev-table .divider td {
+    .h-elev-section {
+      padding: .4rem 0 0;
       border-top: 1px solid var(--border);
-      padding-top: .35rem;
+      font-size: .75rem;
+      display: flex;
+      flex-direction: column;
+      gap: .14rem;
     }
+    .h-elev-label {
+      font-weight: 700;
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+    .h-elev-section.h-base .h-elev-label { color: var(--green); }
+    .h-elev-section.h-mid  .h-elev-label { color: var(--cold); }
+    .h-elev-section.h-peak .h-elev-label { color: #c4b5fd; }
+    .h-elev-ft { font-weight: 400; color: var(--muted); }
+    .h-elev-temp { font-size: .82rem; }
+    .h-feels { color: var(--muted); font-size: .7rem; }
+    .h-elev-wind { color: var(--muted); font-size: .7rem; }
+    .h-elev-precip { font-size: .7rem; color: var(--snow); line-height: 1.55; }
 
-    /* ── Daily forecast ── */
-    .forecast-section { }
+    /* ── Forecast section ─────────────────────────────────────────────────── */
     .forecast-controls {
       display: flex;
       align-items: center;
@@ -278,90 +419,102 @@
       gap: .75rem;
       margin-bottom: 1rem;
     }
-    .elev-tabs { display: flex; gap: .35rem; }
-    .elev-tab {
-      padding: .35rem .9rem;
-      border-radius: 6px;
+    .elev-tabs {
+      display: flex;
+      gap: .25rem;
+      background: var(--surface);
       border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: .22rem;
+    }
+    .elev-tab {
+      padding: .32rem .85rem;
+      border-radius: 7px;
+      border: none;
       background: none;
       color: var(--muted);
-      font-size: .85rem;
+      font-size: .82rem;
       font-weight: 600;
+      font-family: inherit;
       cursor: pointer;
       transition: all .15s;
     }
-    .elev-tab:hover { border-color: var(--accent); color: var(--text); }
-    .elev-tab.active.base { background: #1e3a2f; color: #4ade80; border-color: #166534; }
-    .elev-tab.active.mid  { background: #1e3058; color: #93c5fd; border-color: #1d4ed8; }
-    .elev-tab.active.peak { background: #2d1e58; color: #c4b5fd; border-color: #6d28d9; }
+    .elev-tab:hover { color: var(--text); }
+    .elev-tab.active.base { background: rgba(74,222,128,0.15);  color: var(--green); }
+    .elev-tab.active.mid  { background: rgba(147,197,253,0.15); color: var(--cold); }
+    .elev-tab.active.peak { background: rgba(196,181,253,0.15); color: #c4b5fd; }
+
+    .forecast-scroll-wrap {
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .forecast-scroll-wrap::-webkit-scrollbar { height: 4px; }
+    .forecast-scroll-wrap::-webkit-scrollbar-track { background: transparent; }
+    .forecast-scroll-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
     .forecast-grid {
       display: flex;
       flex-direction: column;
-      gap: .4rem;
+      min-width: 820px;
     }
     .day-row {
       display: grid;
-      grid-template-columns: 100px repeat(10, 1fr);
+      grid-template-columns: 88px repeat(10, 1fr);
       align-items: center;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: .7rem 1rem;
+      padding: .75rem 1.25rem;
       gap: .5rem;
-      font-size: .88rem;
+      font-size: .84rem;
+      border-bottom: 1px solid var(--border);
       transition: background .12s;
     }
-    .day-row:hover { background: var(--surface2); }
+    .day-row:last-child { border-bottom: none; }
+    .day-row:not(.header-row):hover { background: var(--surface2); }
     .day-row.header-row {
-      background: transparent;
-      border-color: transparent;
-      font-size: .75rem;
+      background: rgba(255,255,255,0.02);
+      font-size: .68rem;
       color: var(--muted);
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .07em;
-      padding-bottom: .2rem;
+      letter-spacing: .09em;
     }
-    .day-date { }
-    .day-date .dow { font-weight: 700; }
-    .day-date .date { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
+    .day-date .dow { font-weight: 700; font-size: .88rem; }
+    .day-date .date { font-size: .72rem; color: var(--muted); margin-top: .1rem; }
     .day-cell { text-align: center; }
-    .day-cell.temp-range {
-      font-variant-numeric: tabular-nums;
-    }
     .temp-hi { font-weight: 700; }
     .temp-lo { color: var(--muted); }
     .snow-val { color: var(--snow); font-weight: 600; }
     .snow-val.zero { color: var(--muted); font-weight: 400; }
     .wind-val { font-variant-numeric: tabular-nums; }
-    .cloud-bar-wrap { display: flex; align-items: center; gap: .4rem; justify-content: center; }
+    .cloud-bar-wrap { display: flex; align-items: center; gap: .35rem; justify-content: center; }
     .cloud-bar {
-      flex: 1; max-width: 48px;
-      height: 4px;
+      flex: 1; max-width: 36px;
+      height: 3px;
       background: var(--border);
       border-radius: 2px;
       overflow: hidden;
     }
     .cloud-bar-fill { height: 100%; background: #94a3b8; border-radius: 2px; }
 
-    /* temp color helpers */
+    /* temp colors */
     .t-cold   { color: var(--cold); }
     .t-freeze { color: var(--freeze); }
-    .t-cool   { color: #a7f3d0; }
+    .t-cool   { color: var(--cool); }
     .t-warm   { color: var(--warm); }
     .t-hot    { color: var(--hot); }
 
-    /* ── Loading / Error ── */
+    /* ── Loading / Error ──────────────────────────────────────────────────── */
     .loading {
       text-align: center;
-      padding: 3rem;
+      padding: 4rem 1rem;
       color: var(--muted);
     }
     .spinner {
       display: inline-block;
       width: 28px; height: 28px;
-      border: 3px solid var(--border);
+      border: 2px solid var(--border);
       border-top-color: var(--accent);
       border-radius: 50%;
       animation: spin .7s linear infinite;
@@ -369,35 +522,59 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .error-msg {
-      background: #3b0f0f;
-      border: 1px solid #7f1d1d;
+      background: rgba(127,29,29,0.25);
+      border: 1px solid rgba(239,68,68,0.25);
       color: #fca5a5;
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 1rem 1.25rem;
       margin-top: 1rem;
+      font-size: .9rem;
+      line-height: 1.6;
+    }
+
+    /* ── Responsive ───────────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .header-inner {
+        flex-wrap: wrap;
+        gap: .6rem;
+        padding: .8rem 1rem;
+      }
+      .logo-sub { display: none; }
+      .search-wrap { max-width: 100%; order: 2; flex: 1 1 100%; }
+      main { padding: 1.75rem 1rem 5rem; }
+      .resort-hero-top { flex-direction: column; gap: .75rem; }
+      .resort-hero-name h2 { font-size: 1.6rem; }
+      .resort-hero-actions { width: 100%; }
+      .ai-btn { width: 100%; justify-content: center; }
+      .hourly-card { flex: 0 0 152px; }
+      .ai-panel.visible { flex-direction: column; }
+      .ai-avatar { width: 32px; height: 32px; font-size: 1rem; }
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>⛷ <span>Ski</span> Conditions</h1>
-  <p>Real-time mountain weather · 12-hour &amp; 16-day forecast</p>
-
-  <div class="search-wrap">
-    <div class="search-input-row">
-      <span class="search-icon">🔍</span>
-      <input id="resort-search" type="text" placeholder="Search for a resort…" autocomplete="off" />
-      <button class="clear-btn" id="clear-btn" title="Clear">✕</button>
+  <div class="header-inner">
+    <div class="logo">
+      ⛷ <em>Ski</em>Conditions
     </div>
-    <div class="dropdown" id="dropdown"></div>
+    <div class="search-wrap">
+      <div class="search-input-row">
+        <span class="search-icon">🔍</span>
+        <input id="resort-search" type="text" placeholder="Search for a resort…" autocomplete="off" />
+        <button class="clear-btn" id="clear-btn" title="Clear">✕</button>
+      </div>
+      <div class="dropdown" id="dropdown"></div>
+    </div>
   </div>
 </header>
 
 <main>
   <div class="empty-state" id="empty-state">
     <div class="big">🏔</div>
-    <p>Select a resort above to view conditions</p>
+    <h2>Find your mountain</h2>
+    <p>Search for a ski resort to view live conditions &amp; forecasts</p>
   </div>
 
   <div id="resort-data">
@@ -406,29 +583,26 @@
 </main>
 
 <script>
-  // Local dev hits the FastAPI server directly; everything else (Vercel) calls Railway.
   const API_BASE = window.location.hostname === 'localhost'
     ? 'http://localhost:8000'
     : 'https://skiapp-production-a4ad.up.railway.app';
 
-  // ── State ──────────────────────────────────────────────────────────────
   let resorts = [];
   let activeElevTab = 'peak';
   let currentConditions = null;
 
-  // ── Boot ───────────────────────────────────────────────────────────────
+  // ── Boot ──────────────────────────────────────────────────────────────────
   async function init() {
     try {
       const res = await fetch(`${API_BASE}/resorts/conditions`);
       resorts = await res.json();
-      renderDropdownItems(resorts);
     } catch (e) {
       document.getElementById('empty-state').innerHTML =
         `<div class="error-msg">Failed to load resorts: ${e.message}</div>`;
     }
   }
 
-  // ── Dropdown ───────────────────────────────────────────────────────────
+  // ── Dropdown ──────────────────────────────────────────────────────────────
   const searchEl   = document.getElementById('resort-search');
   const dropdownEl = document.getElementById('dropdown');
   const clearBtn   = document.getElementById('clear-btn');
@@ -446,27 +620,21 @@
       dropdownEl.innerHTML = '<div class="dropdown-empty">No resorts found</div>';
       return;
     }
-
-    // Group by state, preserving the order states first appear in the list
     const groups = {};
-    for (const r of list) {
-      (groups[r.state] ??= []).push(r);
-    }
-
+    for (const r of list) (groups[r.state] ??= []).push(r);
     let html = '';
-    for (const [state, resorts] of Object.entries(groups)) {
+    for (const [state, rs] of Object.entries(groups)) {
       html += `<div class="dropdown-group-header">${STATE_NAMES[state] ?? state}</div>`;
-      html += resorts.map(r => `
+      html += rs.map(r => `
         <div class="dropdown-item" data-id="${r.id}">
           <span>${r.name}</span>
           <span class="elev-badge">Peak ${r.peak_elevation_ft.toLocaleString()} ft</span>
-        </div>
-      `).join('');
+        </div>`).join('');
     }
     dropdownEl.innerHTML = html;
-
     dropdownEl.querySelectorAll('.dropdown-item').forEach(el => {
-      el.addEventListener('click', () => selectResort(el.dataset.id, el.querySelector('span:first-child').textContent.trim()));
+      el.addEventListener('click', () =>
+        selectResort(el.dataset.id, el.querySelector('span:first-child').textContent.trim()));
     });
   }
 
@@ -474,63 +642,67 @@
     renderDropdownItems(filteredResorts());
     dropdownEl.classList.add('open');
   });
-
   searchEl.addEventListener('input', () => {
     clearBtn.classList.toggle('visible', searchEl.value.length > 0);
     renderDropdownItems(filteredResorts());
     dropdownEl.classList.add('open');
   });
-
   clearBtn.addEventListener('click', () => {
     searchEl.value = '';
     clearBtn.classList.remove('visible');
     renderDropdownItems(resorts);
     searchEl.focus();
   });
-
   document.addEventListener('click', e => {
     if (!e.target.closest('.search-wrap')) dropdownEl.classList.remove('open');
   });
-
   function filteredResorts() {
     const q = searchEl.value.trim().toLowerCase();
     return q ? resorts.filter(r => r.name.toLowerCase().includes(q)) : resorts;
   }
 
-  // ── Select resort ──────────────────────────────────────────────────────
+  // ── Select resort ─────────────────────────────────────────────────────────
   async function selectResort(id, name) {
     dropdownEl.classList.remove('open');
     searchEl.value = name;
     clearBtn.classList.add('visible');
-
     document.getElementById('empty-state').style.display = 'none';
-    const resortData = document.getElementById('resort-data');
-    resortData.style.display = 'block';
-    document.getElementById('content').innerHTML = `
-      <div class="loading"><div class="spinner"></div><br>Loading ${name}…</div>`;
-
+    document.getElementById('resort-data').style.display = 'block';
+    document.getElementById('content').innerHTML =
+      `<div class="loading"><div class="spinner"></div><br>Loading ${name}…</div>`;
     try {
       const res = await fetch(`${API_BASE}/resorts/${id}/conditions`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       currentConditions = await res.json();
-      const meta = resorts.find(r => r.id === id);
-      renderResort(currentConditions, meta);
+      renderResort(currentConditions, resorts.find(r => r.id === id));
     } catch (e) {
       document.getElementById('content').innerHTML =
         `<div class="error-msg">Failed to load conditions for ${name}: ${e.message}</div>`;
     }
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────
+  // ── Render resort page ────────────────────────────────────────────────────
   function renderResort(data, meta) {
+    const stateName = STATE_NAMES[data.state] ?? data.state ?? '';
     document.getElementById('content').innerHTML = `
-      <div class="resort-header">
-        <h2>${data.resort}</h2>
+      <div class="resort-hero">
+        <div class="resort-hero-top">
+          <div class="resort-hero-name">
+            <h2>${data.resort}</h2>
+            ${stateName ? `<span class="state-badge">${stateName}</span>` : ''}
+          </div>
+          <div class="resort-hero-actions">
+            <button class="ai-btn" id="ai-btn" onclick="getAIRecommendation()">
+              ✨ Ask AI Advisor
+            </button>
+          </div>
+        </div>
         <div class="elev-pills">
           <span class="elev-pill base">Base ${meta.base_elevation_ft.toLocaleString()} ft</span>
           <span class="elev-pill mid">Mid ${meta.mid_elevation_ft.toLocaleString()} ft</span>
           <span class="elev-pill peak">Peak ${meta.peak_elevation_ft.toLocaleString()} ft</span>
         </div>
+        <div class="ai-panel" id="ai-panel"></div>
       </div>
 
       <div class="hourly-section">
@@ -547,7 +719,9 @@
             <button class="elev-tab peak ${activeElevTab==='peak'?'active':''}" data-elev="peak">Peak</button>
           </div>
         </div>
-        <div class="forecast-grid" id="forecast-grid"></div>
+        <div class="forecast-scroll-wrap">
+          <div class="forecast-grid" id="forecast-grid"></div>
+        </div>
       </div>
     `;
 
@@ -564,14 +738,64 @@
     });
   }
 
-  // ── Hourly cards ───────────────────────────────────────────────────────
+  // ── AI Recommendation ─────────────────────────────────────────────────────
+  async function getAIRecommendation() {
+    const btn   = document.getElementById('ai-btn');
+    const panel = document.getElementById('ai-panel');
+    if (!currentConditions?.next_12_hours?.length) return;
+
+    btn.disabled = true;
+    panel.className = 'ai-panel visible';
+    panel.innerHTML = `
+      <div class="ai-avatar">✨</div>
+      <div class="ai-body">
+        <div class="ai-label">AI Advisor</div>
+        <div class="ai-loading"><div class="ai-spinner"></div>Analyzing conditions…</div>
+      </div>`;
+
+    const h = currentConditions.next_12_hours[0];
+    const peak = h.peak;
+    const payload = {
+      resort_name:    currentConditions.resort,
+      snow_depth_in:  peak.snow_depth_in  ?? null,
+      temperature_f:  peak.temperature_f  ?? null,
+      wind_speed_mph: peak.windspeed_mph  ?? null,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/recommend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      panel.innerHTML = `
+        <div class="ai-avatar">✨</div>
+        <div class="ai-body">
+          <div class="ai-label">AI Advisor</div>
+          <div class="ai-text">${data.recommendation}</div>
+        </div>`;
+    } catch (e) {
+      panel.innerHTML = `
+        <div class="ai-avatar">✨</div>
+        <div class="ai-body">
+          <div class="ai-label">AI Advisor</div>
+          <div class="ai-error">Failed to get recommendation: ${e.message}</div>
+        </div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── Hourly cards ──────────────────────────────────────────────────────────
   function renderHourly(hours) {
-    const container = document.getElementById('hourly-scroll');
-    container.innerHTML = hours.map(h => {
+    document.getElementById('hourly-scroll').innerHTML = hours.map(h => {
       const d = new Date(h.time + ':00');
       const timeLabel = d.toLocaleTimeString([], { hour: 'numeric', hour12: true });
       const icon = weatherIcon(h.peak.snowfall_in, h.peak.rain_in, h.cloud_cover_pct);
-      const freeze = h.freezing_level_ft != null ? h.freezing_level_ft.toLocaleString() + ' ft' : '—';
+      const freeze = h.freezing_level_ft != null
+        ? h.freezing_level_ft.toLocaleString() + ' ft' : '—';
       return `
         <div class="hourly-card">
           <div class="h-time">${timeLabel}</div>
@@ -590,10 +814,10 @@
   function elevSection(zone, e) {
     const label = zone === 'base' ? 'Base' : zone === 'mid' ? 'Mid' : 'Peak';
     const precipParts = [
-      e.snowfall_in  > 0 ? `❄ ${e.snowfall_in}"` : '',
-      e.rain_in      > 0 ? `💧 ${e.rain_in}"`    : '',
-      e.snow_depth_in != null ? `${e.snow_depth_in}" depth` : '',
-      e.visibility_mi != null ? `${e.visibility_mi}mi vis`  : '',
+      e.snowfall_in   > 0          ? `❄ ${e.snowfall_in}"`          : '',
+      e.rain_in       > 0          ? `💧 ${e.rain_in}"`              : '',
+      e.snow_depth_in != null      ? `${e.snow_depth_in}" depth`     : '',
+      e.visibility_mi != null      ? `${e.visibility_mi}mi vis`      : '',
     ].filter(Boolean).join(' · ');
     return `
       <div class="h-elev-section h-${zone}">
@@ -607,11 +831,10 @@
       </div>`;
   }
 
-  // ── Daily forecast ─────────────────────────────────────────────────────
+  // ── Daily forecast ────────────────────────────────────────────────────────
   function renderForecast(days) {
-    const grid = document.getElementById('forecast-grid');
     const elev = activeElevTab;
-    grid.innerHTML = `
+    document.getElementById('forecast-grid').innerHTML = `
       <div class="day-row header-row">
         <div>Date</div>
         <div class="day-cell">High / Low</div>
@@ -623,7 +846,7 @@
         <div class="day-cell">Wind</div>
         <div class="day-cell">Gusts</div>
         <div class="day-cell">Cloud</div>
-        <div class="day-cell">Freeze Level</div>
+        <div class="day-cell">Freeze</div>
       </div>
     ` + days.map(day => {
       const d = new Date(day.date + 'T12:00:00');
@@ -631,18 +854,19 @@
       const date = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
       const e = day[elev];
       const snowClass = e.snowfall_in > 0 ? 'snow-val' : 'snow-val zero';
-      const freeze = day.avg_freezing_level_ft != null ? day.avg_freezing_level_ft.toLocaleString() + ' ft' : '—';
+      const freeze = day.avg_freezing_level_ft != null
+        ? day.avg_freezing_level_ft.toLocaleString() + ' ft' : '—';
       return `
         <div class="day-row">
           <div class="day-date">
             <div class="dow">${dow}</div>
             <div class="date">${date}</div>
           </div>
-          <div class="day-cell temp-range">
+          <div class="day-cell">
             <span class="temp-hi ${tempClass(e.high_f)}">${e.high_f}°</span>
             <span class="temp-lo"> / ${e.low_f}°</span>
           </div>
-          <div class="day-cell temp-range">
+          <div class="day-cell">
             <span class="${tempClass(e.apparent_high_f)}">${e.apparent_high_f}°</span>
             <span class="temp-lo"> / ${e.apparent_low_f}°</span>
           </div>
@@ -663,15 +887,14 @@
     }).join('');
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
   function weatherIcon(snow, rain, cloud) {
-    if (snow > 0)        return '🌨';
-    if (rain > 0)        return '🌧';
-    if (cloud > 70)      return '☁️';
-    if (cloud > 30)      return '⛅';
+    if (snow > 0)   return '🌨';
+    if (rain > 0)   return '🌧';
+    if (cloud > 70) return '☁️';
+    if (cloud > 30) return '⛅';
     return '☀️';
   }
-
   function tempClass(f) {
     if (f < 20)  return 't-cold';
     if (f < 32)  return 't-freeze';
