@@ -1,13 +1,31 @@
-FROM python:3.12-slim
+# ── Build stage ───────────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install all deps (including devDependencies for tsc)
+COPY backend/package*.json ./backend/
+RUN cd backend && npm ci
 
-COPY backend/ /app/
-COPY frontend/ /frontend/
+# Compile TypeScript
+COPY backend/ ./backend/
+RUN cd backend && npm run build
+
+# ── Runtime stage ─────────────────────────────────────────────────────────────
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Production dependencies only
+COPY backend/package*.json ./backend/
+RUN cd backend && npm ci --omit=dev
+
+# Compiled JS from builder
+COPY --from=builder /app/backend/dist ./backend/dist
+
+# Static frontend
+COPY frontend/ ./frontend/
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["node", "backend/dist/server.js"]

@@ -590,6 +590,7 @@
   let resorts = [];
   let activeElevTab = 'peak';
   let currentConditions = null;
+  let currentResortId = null;
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   async function init() {
@@ -663,6 +664,7 @@
 
   // ── Select resort ─────────────────────────────────────────────────────────
   async function selectResort(id, name) {
+    currentResortId = id;
     dropdownEl.classList.remove('open');
     searchEl.value = name;
     clearBtn.classList.add('visible');
@@ -756,6 +758,7 @@
     const h = currentConditions.next_12_hours[0];
     const peak = h.peak;
     const payload = {
+      resort_id:      currentResortId,
       resort_name:    currentConditions.resort,
       snow_depth_in:  peak.snow_depth_in  ?? null,
       temperature_f:  peak.temperature_f  ?? null,
