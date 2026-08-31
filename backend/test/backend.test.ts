@@ -1,10 +1,21 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import request from 'supertest';
 
 import { Cache } from '../src/cache';
 import { RESORTS } from '../src/data/resorts';
 import { app } from '../src/server';
+
+describe('frontend API routing', () => {
+  it('keeps deployed browser requests in the current environment', () => {
+    const frontend = readFileSync(resolve(__dirname, '../../frontend/index.html'), 'utf8');
+
+    assert.match(frontend, /:\s*window\.location\.origin;/);
+    assert.doesNotMatch(frontend, /skiapp-production-[\w-]*\.up\.railway\.app/);
+  });
+});
 
 describe('provider-free API behavior', () => {
   it('reports service health without calling a provider', async () => {

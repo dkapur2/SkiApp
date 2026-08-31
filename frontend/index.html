@@ -585,7 +585,7 @@
 <script>
   const API_BASE = window.location.hostname === 'localhost'
     ? 'http://localhost:8000'
-    : 'https://skiapp-production-a4ad.up.railway.app';
+    : window.location.origin;
 
   let resorts = [];
   let activeElevTab = 'peak';
