@@ -2,6 +2,11 @@ venv/
 **/__pycache__/
 **/*.pyc
 **/*.pyo
+**/.DS_Store
+backend/node_modules/
+backend/dist/
 .env
+.env.*
+!.env.example
 .git/
 .claude/

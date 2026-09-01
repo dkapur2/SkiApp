@@ -1,0 +1,25 @@
+# macOS and editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Node.js
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+
+# Python artifacts retained from the legacy implementation
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Local tooling state
+.codex-log/

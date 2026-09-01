@@ -8,7 +8,7 @@ import { fetchSkiApiData } from './services/skiApi';
 import { getRecommendation } from './services/ai';
 import type { RecommendRequest } from './types';
 
-const app = express();
+export const app = express();
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
@@ -22,6 +22,11 @@ app.use(cors({
   ],
   methods: ['GET', 'POST'],
 }));
+
+/** Lightweight liveness check that never calls an external provider. */
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
 
 // ── API routes ────────────────────────────────────────────────────────────────
 
@@ -89,11 +94,17 @@ app.get('*', (_req, res) => {
 
 // ── Startup ───────────────────────────────────────────────────────────────────
 
-const port = parseInt(process.env.PORT ?? '8000', 10);
+export function startServer(): void {
+  const port = parseInt(process.env.PORT ?? '8000', 10);
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Ski app listening on port ${port}`);
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`Ski app listening on port ${port}`);
 
-  // Warm the Open-Meteo cache in the background — one resort every 2 s
-  warmCache().catch(console.error);
-});
+    // Warm the Open-Meteo cache in the background — one resort every 2 s
+    warmCache().catch(console.error);
+  });
+}
+
+if (require.main === module) {
+  startServer();
+}

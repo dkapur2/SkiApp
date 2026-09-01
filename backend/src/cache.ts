@@ -7,15 +7,17 @@ interface CacheEntry<T> {
 export class Cache<T> {
   private readonly store = new Map<string, CacheEntry<T>>();
   private readonly ttlMs: number;
+  private readonly now: () => number;
 
-  constructor(ttlSeconds: number) {
+  constructor(ttlSeconds: number, now: () => number = Date.now) {
     this.ttlMs = ttlSeconds * 1000;
+    this.now = now;
   }
 
   get(key: string): T | null {
     const entry = this.store.get(key);
     if (!entry) return null;
-    if (Date.now() - entry.timestamp > this.ttlMs) {
+    if (this.now() - entry.timestamp > this.ttlMs) {
       this.store.delete(key);
       return null;
     }
@@ -23,6 +25,6 @@ export class Cache<T> {
   }
 
   set(key: string, data: T): void {
-    this.store.set(key, { data, timestamp: Date.now() });
+    this.store.set(key, { data, timestamp: this.now() });
   }
 }
