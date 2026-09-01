@@ -9,11 +9,11 @@ import { RESORTS } from '../src/data/resorts';
 import { app } from '../src/server';
 
 describe('frontend API routing', () => {
-  it('keeps deployed browser requests in the current environment', () => {
+  it('isolates Railway previews while preserving the production custom domain', () => {
     const frontend = readFileSync(resolve(__dirname, '../../frontend/index.html'), 'utf8');
 
-    assert.match(frontend, /:\s*window\.location\.origin;/);
-    assert.doesNotMatch(frontend, /skiapp-production-[\w-]*\.up\.railway\.app/);
+    assert.match(frontend, /hostname\.endsWith\('\.up\.railway\.app'\)/);
+    assert.match(frontend, /:\s*'https:\/\/skiapp-production-[\w-]*\.up\.railway\.app';/);
   });
 });
 
