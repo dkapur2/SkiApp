@@ -1,6 +1,6 @@
 # Step 2 mobile product prototype
 
-This directory contains a local-only, clickable product prototype for SkiApp's mobile experience. It is deliberately outside `frontend/`, so the Docker image and Railway deployments do not serve it.
+This directory contains a local-only, clickable product prototype for SkiTheEast's mobile experience. It is deliberately outside `frontend/`, so the Docker image and Railway deployments do not serve it.
 
 ## Open it
 

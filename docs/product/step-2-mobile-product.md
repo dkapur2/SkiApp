@@ -7,7 +7,7 @@
 
 ## Product proposition
 
-SkiApp helps an East Coast skier decide **where to ski and when conditions will be best**. It should translate weather, elevation, surface, operations, and travel signals into a recommendation the skier can understand and verify.
+SkiTheEast helps an East Coast skier decide **where to ski and when conditions will be best**. It should translate weather, elevation, surface, operations, and travel signals into a recommendation the skier can understand and verify.
 
 The product is not attempting to win by displaying more raw weather columns. Its advantage should be a narrow, trustworthy decision workflow for volatile East Coast conditions: freeze–thaw cycles, rain transitions, snowmaking windows, elevation differences, wind, operations, distance, and timing.
 
@@ -32,7 +32,7 @@ Secondary jobs are exploring unfamiliar resorts, watching favorite mountains, co
 ## Information architecture
 
 ```text
-SkiApp
+SkiTheEast
 ├── Today
 │   ├── Forecast window: Today / Saturday / Sunday
 │   ├── Best ski window
@@ -100,7 +100,7 @@ These wireframes define hierarchy rather than visual styling. The high-fidelity 
 
 ```text
 ┌──────────────────────────────┐
-│ SkiApp                 ○  DK │
+│ SkiTheEast             ○  DK │
 │ SATURDAY OUTLOOK             │
 │ Your best snow is north.     │
 │ One-sentence regional reason │

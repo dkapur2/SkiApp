@@ -1,6 +1,6 @@
-# SkiApp
+# SkiTheEast
 
-SkiApp is an early-stage ski conditions product. The current web application combines elevation-aware forecasts, resort metadata, optional lift and snow-status data, and a short AI-generated recommendation.
+SkiTheEast is an early-stage ski conditions product maintained in the `SkiApp` repository. The current web application combines elevation-aware forecasts, resort metadata, optional lift and snow-status data, and a short AI-generated recommendation.
 
 The next product phases are a clean map-first mobile experience, radar and forecast layers, and spatial resort discovery with PostgreSQL/PostGIS. Those phases are intentionally not part of this repository-quality milestone.
 
