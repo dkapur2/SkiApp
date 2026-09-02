@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>SkiApp mobile product prototype</title>
+  <style>
+    :root {
+      --canvas: #dfe7e8;
+      --app: #f4f7f6;
+      --surface: #ffffff;
+      --surface-raised: #f8faf9;
+      --text: #102329;
+      --text-soft: #52666b;
+      --text-faint: #7a8e92;
+      --line: #dce5e4;
+      --brand: #116b68;
+      --brand-strong: #0a5352;
+      --brand-soft: #d7efeb;
+      --snow: #dff5f8;
+      --sky: #3f8fa5;
+      --warning: #a4562a;
+      --warning-soft: #fae8dc;
+      --shadow: 0 22px 70px rgba(16, 35, 41, 0.16);
+      --r-sm: 10px;
+      --r-md: 16px;
+      --r-lg: 24px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+    }
+
+    :root[data-theme="dark"] {
+      --canvas: #071216;
+      --app: #0b171b;
+      --surface: #102126;
+      --surface-raised: #14272c;
+      --text: #edf6f4;
+      --text-soft: #a8bab9;
+      --text-faint: #71888a;
+      --line: #23373b;
+      --brand: #67c7bd;
+      --brand-strong: #8fddd4;
+      --brand-soft: #173d3b;
+      --snow: #16383f;
+      --sky: #76c2d2;
+      --warning: #f2a675;
+      --warning-soft: #3b281f;
+      --shadow: 0 24px 80px rgba(0,0,0,.44);
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--canvas); }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 8%, rgba(255,255,255,.78), transparent 32rem),
+        var(--canvas);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button:focus-visible { outline: 3px solid #66b6c7; outline-offset: 2px; }
+
+    .prototype-frame {
+      width: min(100%, 430px);
+      min-height: 100vh;
+      margin: 0 auto;
+      overflow: hidden;
+      background: var(--app);
+      box-shadow: var(--shadow);
+    }
+
+    .status-bar {
+      height: 28px;
+      padding: 8px 22px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-soft);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .app-header {
+      padding: var(--space-3) var(--space-5) var(--space-4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    .theme-button { font-size: 18px; }
+
+    .wordmark {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -.045em;
+    }
+
+    .mark {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      color: #fff;
+      background: var(--brand);
+      font-size: 15px;
+    }
+
+    .icon-button {
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--text);
+      background: var(--surface);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    main { padding: 0 var(--space-5) 104px; }
+    .screen[hidden] { display: none; }
+    .screen { animation: screen-in .2s ease-out; }
+    @keyframes screen-in {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .eyebrow {
+      margin: 2px 0 6px;
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 330px;
+      margin: 0;
+      font-size: clamp(32px, 9vw, 40px);
+      line-height: 1.02;
+      letter-spacing: -.052em;
+    }
+    .lede {
+      margin: 10px 0 0;
+      color: var(--text-soft);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .segment {
+      margin-top: var(--space-6);
+      padding: 4px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      border-radius: 14px;
+      background: #e6eceb;
+    }
+    .segment button {
+      min-height: 44px;
+      border: 0;
+      border-radius: 11px;
+      color: var(--text-soft);
+      background: transparent;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .segment button[aria-selected="true"] {
+      color: var(--text);
+      background: var(--surface);
+      box-shadow: 0 2px 10px rgba(16,35,41,.07);
+    }
+
+    .section-head {
+      margin: var(--space-6) 0 var(--space-3);
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+    .section-head h2 { margin: 0; font-size: 18px; letter-spacing: -.025em; }
+    .section-head span { color: var(--text-faint); font-size: 12px; }
+
+    .verdict-card {
+      padding: var(--space-5);
+      border: 1px solid rgba(17,107,104,.14);
+      border-radius: var(--r-lg);
+      background: linear-gradient(145deg, #e3f3ef, #f8fbfa 70%);
+      box-shadow: 0 14px 36px rgba(20, 76, 75, .08);
+    }
+    .verdict-top { display: flex; justify-content: space-between; gap: var(--space-4); }
+    .condition-label { color: var(--brand-strong); font-size: 12px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .verdict-card h3 { margin: 6px 0 4px; font-size: 25px; letter-spacing: -.04em; }
+    .verdict-card p { margin: 0; color: var(--text-soft); font-size: 14px; line-height: 1.45; }
+
+    .score {
+      width: 62px;
+      height: 62px;
+      flex: 0 0 62px;
+      display: grid;
+      place-items: center;
+      border: 5px solid #73b9ae;
+      border-left-color: rgba(115,185,174,.2);
+      border-radius: 50%;
+      color: var(--brand-strong);
+      background: rgba(255,255,255,.66);
+      font-size: 20px;
+      font-weight: 850;
+    }
+    .score span { display: block; margin-top: -8px; color: var(--text-faint); font-size: 9px; font-weight: 800; }
+
+    .signal-grid {
+      margin-top: var(--space-5);
+      padding-top: var(--space-4);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-3);
+      border-top: 1px solid rgba(17,107,104,.14);
+    }
+    .signal b { display: block; margin-bottom: 3px; font-size: 13px; }
+    .signal small { color: var(--text-soft); font-size: 11px; }
+
+    .resort-card {
+      width: 100%;
+      padding: var(--space-4);
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      color: inherit;
+      background: var(--surface);
+      text-align: left;
+      cursor: pointer;
+    }
+    .resort-card + .resort-card { margin-top: 10px; }
+    .resort-card-top { display: flex; align-items: start; justify-content: space-between; gap: var(--space-3); }
+    .resort-card h3 { margin: 0 0 3px; font-size: 16px; letter-spacing: -.02em; }
+    .resort-card p { margin: 0; color: var(--text-soft); font-size: 12px; }
+    .rating { color: var(--brand); font-size: 13px; font-weight: 800; }
+    .mini-metrics { margin-top: var(--space-4); display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+    .mini-metrics div { padding-top: 10px; border-top: 1px solid var(--line); }
+    .mini-metrics b { display: block; font-size: 13px; }
+    .mini-metrics span { color: var(--text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+
+    .disclosure {
+      margin-top: var(--space-4);
+      padding: 11px 13px;
+      border-radius: var(--r-sm);
+      color: var(--text-soft);
+      background: rgba(255,255,255,.7);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .prototype-note {
+      margin: 0 0 18px;
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--text-soft);
+      background: var(--surface);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .search-box {
+      min-height: 50px;
+      margin-top: var(--space-5);
+      padding: 0 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--surface);
+    }
+    .search-box input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      color: var(--text);
+      background: transparent;
+      font-size: 15px;
+    }
+    .search-box input::placeholder { color: var(--text-faint); }
+    .search-box:focus-within { outline: 3px solid #66b6c7; outline-offset: 2px; }
+
+    .toolbar {
+      margin-top: var(--space-4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+    .toggle {
+      padding: 4px;
+      display: flex;
+      gap: 3px;
+      border-radius: 12px;
+      background: #e6eceb;
+    }
+    :root[data-theme="dark"] .toggle,
+    :root[data-theme="dark"] .segment { background: #14272c; }
+    .toggle button {
+      min-height: 44px;
+      padding: 0 15px;
+      border: 0;
+      border-radius: 9px;
+      color: var(--text-soft);
+      background: transparent;
+      font-size: 12px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .toggle button[aria-pressed="true"] { color: var(--text); background: var(--surface); }
+    .filter-button {
+      min-height: 44px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--text);
+      background: var(--surface);
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .chips { margin-top: 12px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      min-height: 44px;
+      padding: 0 13px;
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--text-soft);
+      background: var(--surface);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .chip.active { color: var(--brand-strong); border-color: var(--brand); background: var(--brand-soft); }
+
+    .map-canvas {
+      position: relative;
+      height: 326px;
+      margin-top: var(--space-4);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      background:
+        linear-gradient(32deg, transparent 48%, rgba(63,143,165,.13) 49%, rgba(63,143,165,.13) 51%, transparent 52%),
+        linear-gradient(150deg, transparent 48%, rgba(17,107,104,.10) 49%, rgba(17,107,104,.10) 51%, transparent 52%),
+        var(--snow);
+      background-size: 100px 100px, 130px 130px, auto;
+    }
+    .map-label {
+      position: absolute;
+      color: var(--text-soft);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: .03em;
+    }
+    .map-pin {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border: 3px solid var(--surface);
+      border-radius: 50% 50% 50% 12px;
+      color: #fff;
+      background: var(--brand);
+      box-shadow: 0 8px 18px rgba(9,62,61,.24);
+      transform: rotate(-45deg);
+      cursor: pointer;
+    }
+    .map-pin span { display: block; font-size: 10px; font-weight: 850; transform: rotate(45deg); }
+    .pin-one { left: 58%; top: 24%; }
+    .pin-two { left: 32%; top: 54%; background: var(--sky); }
+    .pin-three { left: 71%; top: 65%; background: var(--warning); }
+    .map-legend {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      color: var(--text-soft);
+      background: var(--surface);
+      box-shadow: 0 5px 16px rgba(16,35,41,.12);
+      font-size: 10px;
+    }
+    .map-disclaimer { margin: 9px 4px 0; color: var(--text-faint); font-size: 10px; line-height: 1.35; }
+
+    .saved-summary {
+      margin-top: var(--space-5);
+      padding: var(--space-5);
+      border-radius: var(--r-lg);
+      color: #fff;
+      background: linear-gradient(145deg, #155f61, #153e4a);
+    }
+    .saved-summary .eyebrow { color: #a7e7de; }
+    .saved-summary h2 { margin: 3px 0 8px; font-size: 25px; letter-spacing: -.04em; }
+    .saved-summary p { margin: 0; color: rgba(255,255,255,.76); font-size: 13px; line-height: 1.45; }
+    .alert-row {
+      margin-top: 12px;
+      padding: 14px 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--surface);
+    }
+    .alert-row b { display: block; font-size: 14px; }
+    .alert-row span { color: var(--text-soft); font-size: 11px; }
+    .switch {
+      position: relative;
+      width: 52px;
+      height: 44px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+    .switch::before {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 8px;
+      width: 48px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--brand);
+    }
+    .switch::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 11px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      transform: translateX(20px);
+      transition: transform .18s;
+    }
+    .switch[aria-checked="false"]::before { background: #aebcbb; }
+    .switch[aria-checked="false"]::after { transform: translateX(0); }
+
+    .detail-header {
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .back-button, .save-button {
+      min-height: 44px;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      color: var(--text);
+      background: var(--surface);
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .detail-title { margin: 20px 0 0; }
+    .detail-title h1 { font-size: 34px; }
+    .detail-title p { margin: 7px 0 0; color: var(--text-soft); font-size: 13px; }
+    .status-pill {
+      display: inline-flex;
+      min-height: 30px;
+      margin-top: 13px;
+      padding: 0 11px;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      color: var(--brand-strong);
+      background: var(--brand-soft);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
+    .decision-grid { margin-top: var(--space-4); display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .decision-card {
+      min-height: 108px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--surface);
+    }
+    .decision-card .kicker { color: var(--text-faint); font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .decision-card b { display: block; margin: 8px 0 4px; font-size: 17px; }
+    .decision-card p { margin: 0; color: var(--text-soft); font-size: 11px; line-height: 1.4; }
+    .window-timeline {
+      padding: 14px 4px 6px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+    }
+    .window-hour { text-align: center; }
+    .window-hour span { display: block; color: var(--text-faint); font-size: 10px; }
+    .window-bar { height: 48px; margin: 7px auto; border-radius: 7px; background: #cbd8d7; }
+    .window-bar.good { background: var(--brand); }
+    .window-bar.fair { background: #73b9ae; }
+    .forecast-row {
+      min-height: 62px;
+      display: grid;
+      grid-template-columns: 64px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .forecast-row:last-child { border-bottom: 0; }
+    .forecast-row b { font-size: 13px; }
+    .forecast-row span { color: var(--text-soft); font-size: 11px; }
+    .forecast-temp { color: var(--text); font-weight: 800; }
+    details {
+      margin-top: var(--space-5);
+      padding: 0 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--surface);
+    }
+    summary {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+      list-style: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    details p { margin: 0 0 15px; color: var(--text-soft); font-size: 12px; line-height: 1.5; }
+    .source-note { margin-top: 16px; color: var(--text-faint); font-size: 10px; line-height: 1.5; }
+
+    .toast {
+      position: fixed;
+      z-index: 30;
+      left: 50%;
+      bottom: 92px;
+      padding: 11px 16px;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--text);
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      font-weight: 750;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 12px);
+      transition: .2s ease;
+    }
+    .toast.visible { opacity: 1; transform: translate(-50%, 0); }
+
+    .tab-bar {
+      position: fixed;
+      z-index: 10;
+      left: 50%;
+      bottom: 0;
+      width: min(100%, 430px);
+      padding: 8px 22px max(15px, env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--line);
+      background: rgba(248,250,249,.94);
+      backdrop-filter: blur(18px);
+      transform: translateX(-50%);
+    }
+    .tab-bar button {
+      min-height: 52px;
+      border: 0;
+      border-radius: 12px;
+      color: var(--text-faint);
+      background: transparent;
+      font-size: 11px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .tab-bar button span { display: block; margin-bottom: 3px; font-size: 18px; }
+    .tab-bar button[aria-current="page"] { color: var(--brand); background: var(--brand-soft); }
+    :root[data-theme="dark"] .tab-bar { background: rgba(11,23,27,.94); }
+
+    @media (min-width: 700px) {
+      body { padding: 28px 0; }
+      .prototype-frame { min-height: calc(100vh - 56px); border-radius: 34px; }
+      .tab-bar { bottom: 28px; border-radius: 0 0 34px 34px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="prototype-frame">
+    <div class="status-bar" aria-hidden="true"><span>9:41</span><span>● ◒ ▰</span></div>
+    <header class="app-header">
+      <div class="wordmark"><span class="mark">▲</span> SkiApp</div>
+      <div class="header-actions">
+        <button class="icon-button theme-button" id="theme-button" aria-label="Switch to dark appearance">☾</button>
+        <button class="icon-button" aria-label="Open preferences">DK</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="screen" data-screen="today">
+        <div class="prototype-note">Interactive product concept · all condition, score, distance, and timing values are illustrative.</div>
+        <p class="eyebrow">Saturday outlook</p>
+        <h1>Your best snow is north.</h1>
+        <p class="lede">Colder overnight temperatures favor Vermont. Leave early for the softest morning surface.</p>
+
+        <div class="segment" role="tablist" aria-label="Forecast window">
+          <button role="tab" aria-selected="true">Today</button>
+          <button role="tab" aria-selected="false">Saturday</button>
+          <button role="tab" aria-selected="false">Sunday</button>
+        </div>
+
+        <div class="section-head">
+          <h2>Best window</h2>
+          <span>Near Philadelphia</span>
+        </div>
+
+        <article class="verdict-card">
+          <div class="verdict-top">
+            <div>
+              <div class="condition-label">Good · 8–11 AM</div>
+              <h3>Killington</h3>
+              <p>Firm first chair, then packed powder as the summit warms.</p>
+            </div>
+            <div class="score" aria-label="Condition score 82 out of 100">82<span>/ 100</span></div>
+          </div>
+          <div class="signal-grid">
+            <div class="signal"><b>3.4 in</b><small>fresh snow</small></div>
+            <div class="signal"><b>24°F</b><small>summit</small></div>
+            <div class="signal"><b>18 mph</b><small>gusts</small></div>
+          </div>
+          <div class="disclosure">Proposed interpretation layer · expands to explain the forecast signals behind this recommendation.</div>
+        </article>
+
+        <div class="section-head">
+          <h2>Worth the drive</h2>
+          <span>Ranked for this window</span>
+        </div>
+
+        <button class="resort-card detail-link" type="button">
+          <div class="resort-card-top">
+            <div><h3>Snowshoe</h3><p>West Virginia · 4 hr 18 min</p></div>
+            <span class="rating">Very good</span>
+          </div>
+          <div class="mini-metrics">
+            <div><b>5.1 in</b><span>48h snow</span></div>
+            <div><b>27°F</b><span>peak</span></div>
+            <div><b>9 AM</b><span>best time</span></div>
+          </div>
+        </button>
+
+        <button class="resort-card detail-link" type="button">
+          <div class="resort-card-top">
+            <div><h3>Killington</h3><p>Vermont · 5 hr 12 min</p></div>
+            <span class="rating">Good</span>
+          </div>
+          <div class="mini-metrics">
+            <div><b>3.4 in</b><span>48h snow</span></div>
+            <div><b>24°F</b><span>peak</span></div>
+            <div><b>8 AM</b><span>best time</span></div>
+          </div>
+        </button>
+
+        <button class="resort-card detail-link" type="button">
+          <div class="resort-card-top">
+            <div><h3>Blue Mountain</h3><p>Pennsylvania · 1 hr 34 min</p></div>
+            <span class="rating">Fair</span>
+          </div>
+          <div class="mini-metrics">
+            <div><b>0.8 in</b><span>48h snow</span></div>
+            <div><b>31°F</b><span>peak</span></div>
+            <div><b>8 AM</b><span>best time</span></div>
+          </div>
+        </button>
+      </section>
+
+      <section class="screen" data-screen="explore" hidden>
+        <p class="eyebrow">Explore the East</p>
+        <h1>Find the right mountain.</h1>
+        <p class="lede">Compare terrain, travel, and the ski window—not just snowfall totals.</p>
+
+        <label class="search-box">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" placeholder="Resort, state, or region" aria-label="Search resorts" />
+        </label>
+
+        <div class="toolbar">
+          <div class="toggle" aria-label="Explore view">
+            <button aria-pressed="true" data-view="map">Map</button>
+            <button aria-pressed="false" data-view="list">List</button>
+          </div>
+          <button class="filter-button" id="filter-button" aria-expanded="true">Filters · 2</button>
+        </div>
+
+        <div class="chips" id="filter-chips">
+          <button class="chip active">Within 5 hr</button>
+          <button class="chip active">Good+</button>
+          <button class="chip">Fresh snow</button>
+          <button class="chip">Open now</button>
+        </div>
+
+        <div id="map-view">
+          <div class="map-canvas" role="img" aria-label="Conceptual map showing three resort condition scores">
+            <span class="map-label" style="left:12%;top:14%">NEW YORK</span>
+            <span class="map-label" style="left:58%;top:8%">VERMONT</span>
+            <span class="map-label" style="left:12%;top:70%">PENNSYLVANIA</span>
+            <button class="map-pin pin-one detail-link" aria-label="Killington, score 82"><span>82</span></button>
+            <button class="map-pin pin-two detail-link" aria-label="Hunter Mountain, score 76"><span>76</span></button>
+            <button class="map-pin pin-three detail-link" aria-label="Blue Mountain, score 64"><span>64</span></button>
+            <div class="map-legend">Score · better is darker</div>
+          </div>
+          <p class="map-disclaimer">Conceptual map only. Real resort geometry, viewport queries, and distance filters arrive with the PostGIS phase; radar becomes an optional overlay later.</p>
+        </div>
+
+        <div id="list-view" hidden>
+          <div class="section-head"><h2>12 matches</h2><span>Best conditions first</span></div>
+          <button class="resort-card detail-link" type="button">
+            <div class="resort-card-top"><div><h3>Killington</h3><p>Vermont · 5 hr 12 min</p></div><span class="rating">82</span></div>
+            <div class="mini-metrics"><div><b>3.4 in</b><span>48h snow</span></div><div><b>24°F</b><span>peak</span></div><div><b>8–11</b><span>best window</span></div></div>
+          </button>
+          <button class="resort-card detail-link" type="button">
+            <div class="resort-card-top"><div><h3>Hunter Mountain</h3><p>New York · 3 hr 21 min</p></div><span class="rating">76</span></div>
+            <div class="mini-metrics"><div><b>2.2 in</b><span>48h snow</span></div><div><b>26°F</b><span>peak</span></div><div><b>9–12</b><span>best window</span></div></div>
+          </button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="saved" hidden>
+        <p class="eyebrow">Your mountains</p>
+        <h1>Watch the next window.</h1>
+        <p class="lede">Favorites stay quiet until conditions meaningfully improve.</p>
+
+        <div class="saved-summary">
+          <p class="eyebrow">Next useful change</p>
+          <h2>Cold front Friday night</h2>
+          <p>Three saved resorts could transition from wet snow to accumulating snow after 10 PM.</p>
+        </div>
+
+        <div class="section-head"><h2>Saved resorts</h2><span>3 mountains</span></div>
+        <button class="resort-card detail-link" type="button">
+          <div class="resort-card-top"><div><h3>Killington</h3><p>Good Saturday morning</p></div><span class="rating">82</span></div>
+          <div class="mini-metrics"><div><b>3.4 in</b><span>48h snow</span></div><div><b>24°F</b><span>peak</span></div><div><b>8–11</b><span>best window</span></div></div>
+        </button>
+        <button class="resort-card detail-link" type="button">
+          <div class="resort-card-top"><div><h3>Snowshoe</h3><p>Very good Saturday</p></div><span class="rating">88</span></div>
+          <div class="mini-metrics"><div><b>5.1 in</b><span>48h snow</span></div><div><b>27°F</b><span>peak</span></div><div><b>9–12</b><span>best window</span></div></div>
+        </button>
+
+        <div class="section-head"><h2>Alert concepts</h2><span>Future phase</span></div>
+        <div class="alert-row"><div><b>Fresh snow</b><span>Notify at 4 inches in 24 hours</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Fresh snow alerts"></button></div>
+        <div class="alert-row"><div><b>Good ski window</b><span>Condition score reaches 75</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Good ski window alerts"></button></div>
+        <div class="alert-row"><div><b>Operations</b><span>Meaningful lift or terrain change</span></div><button class="switch" role="switch" aria-checked="false" aria-label="Operations alerts"></button></div>
+      </section>
+
+      <section class="screen" data-screen="detail" hidden>
+        <div class="detail-header">
+          <button class="back-button" id="detail-back">← Back</button>
+          <button class="save-button" id="save-button" aria-pressed="false">♡ Save</button>
+        </div>
+        <div class="detail-title">
+          <p class="eyebrow">Vermont</p>
+          <h1>Killington</h1>
+          <p>Updated 9 minutes ago · weather model and resort report</p>
+          <span class="status-pill"><span class="status-dot"></span>Open · 124 of 155 trails</span>
+        </div>
+
+        <div class="section-head"><h2>Saturday verdict</h2><span>Peak selected</span></div>
+        <article class="verdict-card">
+          <div class="verdict-top"><div><div class="condition-label">Good · 8–11 AM</div><h3>Go early</h3><p>A firm start should soften into packed powder before rising winds.</p></div><div class="score">82<span>/ 100</span></div></div>
+        </article>
+
+        <div class="segment elevation-tabs" role="tablist" aria-label="Mountain elevation">
+          <button role="tab" aria-selected="false">Base</button>
+          <button role="tab" aria-selected="false">Mid</button>
+          <button role="tab" aria-selected="true">Peak</button>
+        </div>
+
+        <div class="decision-grid">
+          <article class="decision-card"><span class="kicker">Surface</span><b>Packed powder</b><p>Firm early; best after one hour of traffic.</p></article>
+          <article class="decision-card"><span class="kicker">Weather</span><b>24°F · Cloudy</b><p>Feels like 17°F with west wind.</p></article>
+          <article class="decision-card"><span class="kicker">Fresh snow</span><b>3.4 inches</b><p>Expected by Saturday morning.</p></article>
+          <article class="decision-card"><span class="kicker">Main risk</span><b>Wind after 1 PM</b><p>Peak gusts could reach 31 mph.</p></article>
+        </div>
+
+        <div class="section-head"><h2>Best time</h2><span>Saturday</span></div>
+        <div class="window-timeline" aria-label="Condition quality by time">
+          <div class="window-hour"><span>7 AM</span><div class="window-bar fair" style="height:35px"></div><span>Firm</span></div>
+          <div class="window-hour"><span>9 AM</span><div class="window-bar good"></div><span>Good</span></div>
+          <div class="window-hour"><span>11 AM</span><div class="window-bar good" style="height:44px"></div><span>Good</span></div>
+          <div class="window-hour"><span>1 PM</span><div class="window-bar fair" style="height:31px"></div><span>Fair</span></div>
+          <div class="window-hour"><span>3 PM</span><div class="window-bar" style="height:22px"></div><span>Windy</span></div>
+        </div>
+
+        <details>
+          <summary>Why this recommendation?<span>＋</span></summary>
+          <p>The concept combines summit temperature, recent and forecast snowfall, rain risk, freezing level, wind, and operational status. The production scoring model must be deterministic, tested, and explainable before launch; AI may summarize these signals but must not invent them.</p>
+        </details>
+
+        <div class="section-head"><h2>Five-day signal</h2><span>Details on demand</span></div>
+        <div class="resort-card" role="table" aria-label="Five day forecast">
+          <div class="forecast-row" role="row"><b>Sat 17</b><span>Snow early · 3.4 in</span><span class="forecast-temp">28° / 18°</span></div>
+          <div class="forecast-row" role="row"><b>Sun 18</b><span>Windy · trace</span><span class="forecast-temp">24° / 12°</span></div>
+          <div class="forecast-row" role="row"><b>Mon 19</b><span>Dry · firm</span><span class="forecast-temp">31° / 16°</span></div>
+          <div class="forecast-row" role="row"><b>Tue 20</b><span>Mixed snow · 1.1 in</span><span class="forecast-temp">34° / 23°</span></div>
+          <div class="forecast-row" role="row"><b>Wed 21</b><span>Cloudy · softening</span><span class="forecast-temp">38° / 27°</span></div>
+        </div>
+
+        <p class="source-note">Illustrative prototype data. The shipped product must show provider attribution, observation/forecast time, model limitations, and which resort-operation fields are independently verified.</p>
+      </section>
+    </main>
+
+    <nav class="tab-bar" aria-label="Primary navigation">
+      <button data-target="today" aria-current="page"><span>⌂</span>Today</button>
+      <button data-target="explore"><span>⌖</span>Explore</button>
+      <button data-target="saved"><span>♡</span>Saved</button>
+    </nav>
+    <div class="toast" role="status" aria-live="polite">Saved to your mountains</div>
+  </div>
+
+  <script>
+    const screens = [...document.querySelectorAll('[data-screen]')];
+    const navigation = [...document.querySelectorAll('[data-target]')];
+    let previousScreen = 'today';
+
+    function showScreen(name) {
+      if (name !== 'detail') previousScreen = name;
+      screens.forEach((screen) => { screen.hidden = screen.dataset.screen !== name; });
+      navigation.forEach((button) => {
+        if (button.dataset.target === name) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+      });
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+    }
+
+    navigation.forEach((button) => button.addEventListener('click', () => showScreen(button.dataset.target)));
+    document.querySelectorAll('.detail-link').forEach((button) => button.addEventListener('click', () => showScreen('detail')));
+    document.getElementById('detail-back').addEventListener('click', () => showScreen(previousScreen));
+
+    document.querySelectorAll('[role="tablist"]').forEach((group) => {
+      group.querySelectorAll('[role="tab"]').forEach((tab) => tab.addEventListener('click', () => {
+        group.querySelectorAll('[role="tab"]').forEach((candidate) => candidate.setAttribute('aria-selected', String(candidate === tab)));
+      }));
+    });
+
+    const mapView = document.getElementById('map-view');
+    const listView = document.getElementById('list-view');
+    document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => {
+      const isMap = button.dataset.view === 'map';
+      mapView.hidden = !isMap;
+      listView.hidden = isMap;
+      document.querySelectorAll('[data-view]').forEach((candidate) => candidate.setAttribute('aria-pressed', String(candidate === button)));
+    }));
+
+    const filterButton = document.getElementById('filter-button');
+    const filterChips = document.getElementById('filter-chips');
+    filterButton.addEventListener('click', () => {
+      const expanded = filterButton.getAttribute('aria-expanded') === 'true';
+      filterButton.setAttribute('aria-expanded', String(!expanded));
+      filterChips.hidden = expanded;
+    });
+    document.querySelectorAll('.chip').forEach((chip) => chip.addEventListener('click', () => chip.classList.toggle('active')));
+
+    document.querySelectorAll('.switch').forEach((control) => control.addEventListener('click', () => {
+      control.setAttribute('aria-checked', String(control.getAttribute('aria-checked') !== 'true'));
+    }));
+
+    const themeButton = document.getElementById('theme-button');
+    themeButton.addEventListener('click', () => {
+      const dark = document.documentElement.dataset.theme !== 'dark';
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      themeButton.textContent = dark ? '☀' : '☾';
+      themeButton.setAttribute('aria-label', dark ? 'Switch to light appearance' : 'Switch to dark appearance');
+    });
+
+    const saveButton = document.getElementById('save-button');
+    const toast = document.querySelector('.toast');
+    saveButton.addEventListener('click', () => {
+      const saved = saveButton.getAttribute('aria-pressed') !== 'true';
+      saveButton.setAttribute('aria-pressed', String(saved));
+      saveButton.textContent = saved ? '♥ Saved' : '♡ Save';
+      toast.textContent = saved ? 'Saved to your mountains' : 'Removed from saved mountains';
+      toast.classList.add('visible');
+      window.setTimeout(() => toast.classList.remove('visible'), 1600);
+    });
+  </script>
+</body>
+</html>
