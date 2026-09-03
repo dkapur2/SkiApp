@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
-import { ElevationControl } from '@/components/forecast-ui';
+import { ElevationControl, FreshnessBlock } from '@/components/forecast-ui';
 import { StatePanel } from '@/components/state-panel';
 
 describe('accessible forecast controls and states', () => {
@@ -19,5 +19,22 @@ describe('accessible forecast controls and states', () => {
     expect(view.getByText('You appear to be offline')).toBeOnTheScreen();
     expect(view.getByText(/never turn a missing forecast into zero/i)).toBeOnTheScreen();
     expect(view.getByRole('button', { name: 'Try again' })).toBeOnTheScreen();
+  });
+
+  it('shows provider and server freshness without inventing a model run', () => {
+    const view = render(
+      <FreshnessBlock
+        weather={{
+          source: 'open-meteo',
+          fetched_at: new Date().toISOString(),
+          model_run_at: null,
+        }}
+      />,
+    );
+
+    expect(view.getByText('Open-Meteo forecast')).toBeOnTheScreen();
+    expect(view.getByText(/Server fetched/)).toBeOnTheScreen();
+    expect(view.getByText('Provider model run')).toBeOnTheScreen();
+    expect(view.getByText('Not provided')).toBeOnTheScreen();
   });
 });

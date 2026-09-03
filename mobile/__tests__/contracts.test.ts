@@ -4,7 +4,14 @@ import { resortConditionsFixture } from './fixtures';
 
 describe('forecast API contract', () => {
   it('accepts the current backend response', () => {
-    expect(resortConditionsSchema.parse(resortConditionsFixture).resort).toBe('Elk Mountain');
+    const parsed = resortConditionsSchema.parse(resortConditionsFixture);
+
+    expect(parsed.resort).toBe('Elk Mountain');
+    expect(parsed.weather_metadata).toEqual({
+      source: 'open-meteo',
+      fetched_at: '2026-01-17T12:00:00.000Z',
+      model_run_at: null,
+    });
   });
 
   it('preserves unknown measurements as null', () => {
@@ -20,5 +27,12 @@ describe('forecast API contract', () => {
 
   it('rejects an unsafe response instead of guessing', () => {
     expect(() => resortConditionsSchema.parse({ resort: 'Elk Mountain' })).toThrow();
+  });
+
+  it('rejects invented or malformed weather freshness metadata', () => {
+    const fixture = structuredClone(resortConditionsFixture);
+    fixture.weather_metadata.fetched_at = 'recently';
+
+    expect(() => resortConditionsSchema.parse(fixture)).toThrow();
   });
 });

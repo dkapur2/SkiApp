@@ -44,6 +44,11 @@ const dailyElevation = (high: number, elevation: number) => ({
 export const resortConditionsFixture: ResortConditions = {
   resort: 'Elk Mountain',
   state: 'PA',
+  weather_metadata: {
+    source: 'open-meteo',
+    fetched_at: '2026-01-17T12:00:00.000Z',
+    model_run_at: null,
+  },
   next_12_hours: [
     {
       time: '2026-01-17T08:00:00-05:00',

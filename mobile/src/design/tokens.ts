@@ -82,6 +82,7 @@ export const minimumTargetSize = 44;
 export function useSkiTheme(): SkiTheme {
   const systemTheme = useColorScheme();
   const visualTheme = __DEV__ ? process.env.EXPO_PUBLIC_VISUAL_THEME : undefined;
-  if (visualTheme === 'light' || visualTheme === 'dark') return palettes[visualTheme];
+  if (visualTheme === 'light') return palettes.light;
+  if (visualTheme === 'dark') return palettes.dark;
   return systemTheme === 'dark' ? palettes.dark : palettes.light;
 }

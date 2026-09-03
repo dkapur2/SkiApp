@@ -122,6 +122,7 @@ export function weatherIsPartial(
   ].some((value) => value === null || value === undefined);
 }
 
-export function isClientDataStale(dataUpdatedAt: number, now = Date.now()): boolean {
-  return dataUpdatedAt > 0 && now - dataUpdatedAt > 30 * 60_000;
+export function isWeatherDataStale(fetchedAt: string, now = Date.now()): boolean {
+  const parsed = new Date(fetchedAt).getTime();
+  return !Number.isFinite(parsed) || now - parsed > 30 * 60_000;
 }

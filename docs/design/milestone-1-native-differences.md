@@ -12,11 +12,11 @@ The Claude Design mobile v2 handoff is preserved under `design/claude-handoff/20
 
 ## Current API constraints
 
-- Weather freshness is the mobile client's successful retrieval time because the existing API does not expose a provider fetch or model timestamp.
+- Weather freshness uses the backend's successful Open-Meteo fetch time and survives process-local cache hits. The provider does not currently expose a reliable model initialization time, so `model_run_at` remains explicitly null and the UI says it was not provided.
 - Resort operations use their provider timestamp when returned. A null `ski_conditions` response cannot currently distinguish unconfigured, unsupported, and provider-failure cases, so the UI says only that operations are unavailable and explicitly does not infer closure.
-- The mobile decoder accepts nullable weather measurements even though parts of the current backend contract still type snow, rain, and cloud cover as non-null numbers. A later versioned API milestone should correct the backend's unknown-to-zero behavior.
+- Backend and mobile contracts keep unknown snow, rain, and cloud-cover measurements nullable. A measured zero remains zero; missing inputs no longer generate synthetic zero precipitation or clear-sky values.
 - This milestone corrects the existing Open-Meteo imperial-unit handling for snow depth, visibility, and freezing height. Open-Meteo already returns those fields in feet when `temperature_unit=fahrenheit` is requested, so the backend now converts feet to inches/miles where needed instead of treating the values as meters.
-- Stale status in this slice describes an in-memory response older than 30 minutes or a failed refresh while prior data remains available. Persistent offline caching is not included.
+- Stale status describes a server weather fetch older than 30 minutes or a failed refresh while prior data remains available. Persistent offline caching is not included.
 
 ## Native-platform choices
 

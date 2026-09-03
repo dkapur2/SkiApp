@@ -30,8 +30,8 @@ export interface HourlyElevationData {
   apparent_temperature_f: number | null;
   windspeed_mph: number | null;
   windgusts_mph: number | null;
-  snowfall_in: number;
-  rain_in: number;
+  snowfall_in: number | null;
+  rain_in: number | null;
   precipitation_in: number | null;
   snow_depth_in: number | null;
   visibility_mi: number | null;
@@ -54,8 +54,8 @@ export interface DailyElevationData {
   apparent_low_f: number | null;
   max_windspeed_mph: number | null;
   max_windgusts_mph: number | null;
-  snowfall_in: number;
-  rain_in: number;
+  snowfall_in: number | null;
+  rain_in: number | null;
   precipitation_in: number | null;
   max_snow_depth_in: number | null;
   min_visibility_mi: number | null;
@@ -63,7 +63,7 @@ export interface DailyElevationData {
 
 export interface DailyForecast {
   date: string;
-  cloud_cover_avg_pct: number;
+  cloud_cover_avg_pct: number | null;
   avg_freezing_level_ft: number | null;
   base: DailyElevationData;
   mid: DailyElevationData;
@@ -118,8 +118,17 @@ export interface SkiApiData {
 export interface WeatherConditions {
   resort: string;
   state: string;
+  weather_metadata: WeatherMetadata;
   next_12_hours: HourlySnapshot[];
   forecast: DailyForecast[];
+}
+
+export interface WeatherMetadata {
+  source: 'open-meteo';
+  /** Time this server successfully received the provider response. */
+  fetched_at: string;
+  /** Provider model initialization time, when the provider exposes one reliably. */
+  model_run_at: string | null;
 }
 
 /** Full response shape returned to clients at GET /resorts/:id/conditions */

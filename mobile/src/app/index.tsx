@@ -158,7 +158,7 @@ export default function TodayScreen() {
                 onPress={() => router.push({ pathname: '/resorts/[resortId]', params: { resortId: selectedResort.id } })}
               />
               <FreshnessBlock
-                weatherReceivedAt={conditionsQuery.dataUpdatedAt}
+                weather={conditionsQuery.data.weather_metadata}
                 operationsFetchedAt={conditionsQuery.data.ski_conditions?.fetched_at}
               />
             </Card>

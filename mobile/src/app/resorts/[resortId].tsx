@@ -28,7 +28,7 @@ import {
   formatTime,
   hasEnoughForecastData,
   hourlyAtElevation,
-  isClientDataStale,
+  isWeatherDataStale,
   stateName,
   weatherIsPartial,
 } from '@/utils/forecast';
@@ -51,7 +51,9 @@ export default function ResortDetailScreen() {
     );
   };
 
-  const stale = isClientDataStale(conditionsQuery.dataUpdatedAt) || conditionsQuery.isRefetchError;
+  const stale = conditionsQuery.data
+    ? isWeatherDataStale(conditionsQuery.data.weather_metadata.fetched_at) || conditionsQuery.isRefetchError
+    : false;
 
   return (
     <AppScreen testID="resort-detail-screen">
@@ -83,7 +85,6 @@ export default function ResortDetailScreen() {
       {conditionsQuery.data ? (
         <DetailContent
           conditions={conditionsQuery.data}
-          dataUpdatedAt={conditionsQuery.dataUpdatedAt}
           elevation={elevation}
           isRefreshing={conditionsQuery.isFetching}
           metadata={metadata}
@@ -98,7 +99,6 @@ export default function ResortDetailScreen() {
 
 type DetailContentProps = {
   conditions: ResortConditions;
-  dataUpdatedAt: number;
   elevation: ElevationKey;
   isRefreshing: boolean;
   metadata?: {
@@ -113,7 +113,6 @@ type DetailContentProps = {
 
 function DetailContent({
   conditions,
-  dataUpdatedAt,
   elevation,
   isRefreshing,
   metadata,
@@ -216,7 +215,7 @@ function DetailContent({
       <OperationsCard conditions={conditions} />
 
       <FreshnessBlock
-        weatherReceivedAt={dataUpdatedAt}
+        weather={conditions.weather_metadata}
         operationsFetchedAt={conditions.ski_conditions?.fetched_at}
       />
       <ActionButton label="Refresh forecast" onPress={onRetry} secondary />
