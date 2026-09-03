@@ -10,6 +10,7 @@ import type {
   ResortMetadata,
 } from '../types';
 import { RESORTS } from '../data/resorts';
+import { feetToInches, feetToMiles, roundFeet } from './openMeteoUnits';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -54,18 +55,6 @@ const SNOW_WATER_RATIO = 10.0;
 const conditionsCache = new Cache<WeatherConditions>(1800);
 
 // ── Unit helpers ──────────────────────────────────────────────────────────────
-
-function mToIn(v: number | null): number | null {
-  return v !== null ? Math.round(v * 39.3701 * 100) / 100 : null;
-}
-
-function mToMi(v: number | null): number | null {
-  return v !== null ? Math.round((v / 1609.34) * 10) / 10 : null;
-}
-
-function mToFt(v: number | null): number | null {
-  return v !== null ? Math.round(v * 3.28084) : null;
-}
 
 // ── Elevation adjustment ──────────────────────────────────────────────────────
 
@@ -190,8 +179,8 @@ function phaseCorrect(
 /** Build per-elevation daily rows for one elevation view of the data. */
 function elevationDays(data: OpenMeteoResponse): Record<string, Omit<DailyElevationData, 'elevation_ft'>> {
   const d = data.daily;
-  const snowDepthMax = dailyAgg(data, 'snow_depth', vals => mToIn(Math.max(...vals)));
-  const visibilityMin = dailyAgg(data, 'visibility', vals => mToMi(Math.min(...vals)));
+  const snowDepthMax = dailyAgg(data, 'snow_depth', vals => feetToInches(Math.max(...vals)));
+  const visibilityMin = dailyAgg(data, 'visibility', vals => feetToMiles(Math.min(...vals)));
 
   const result: Record<string, Omit<DailyElevationData, 'elevation_ft'>> = {};
   for (let i = 0; i < d.time.length; i++) {
@@ -233,8 +222,8 @@ function hourlyElevationSnapshot(
     snowfall_in:            snowfall,
     rain_in:                rain,
     precipitation_in:       h.precipitation[idx],
-    snow_depth_in:          mToIn(h.snow_depth[idx]),
-    visibility_mi:          mToMi(h.visibility[idx]),
+    snow_depth_in:          feetToInches(h.snow_depth[idx]),
+    visibility_mi:          feetToMiles(h.visibility[idx]),
   };
 }
 
@@ -277,7 +266,7 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
   const freezingLevelByDate = dailyAgg(
     peakData,
     'freezinglevel_height',
-    vals => mToFt(vals.reduce((a, b) => a + b, 0) / vals.length),
+    vals => roundFeet(vals.reduce((a, b) => a + b, 0) / vals.length),
   );
 
   const baseElevFt = Math.round(resort.base_elevation * 3.28084);
@@ -303,7 +292,7 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
     next12Hours.push({
       time:              times[idx],
       cloud_cover_pct:   peakH.cloudcover[idx],
-      freezing_level_ft: mToFt(peakH.freezinglevel_height[idx]),
+      freezing_level_ft: roundFeet(peakH.freezinglevel_height[idx]),
       base: { elevation_ft: baseElevFt, ...hourlyElevationSnapshot(baseData, idx) },
       mid:  { elevation_ft: midElevFt,  ...hourlyElevationSnapshot(midData,  idx) },
       peak: { elevation_ft: peakElevFt, ...hourlyElevationSnapshot(peakData, idx) },
