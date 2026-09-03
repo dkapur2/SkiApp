@@ -7,6 +7,7 @@ import request from 'supertest';
 import { Cache } from '../src/cache';
 import { RESORTS } from '../src/data/resorts';
 import { app } from '../src/server';
+import { feetToInches, feetToMiles, roundFeet } from '../src/services/openMeteoUnits';
 
 describe('frontend API routing', () => {
   it('isolates Railway previews while preserving the production custom domain', () => {
@@ -68,5 +69,19 @@ describe('Cache', () => {
 
     assert.equal(cache.get('resort'), null);
     assert.equal(cache.get('resort'), null);
+  });
+});
+
+describe('Open-Meteo imperial length units', () => {
+  it('normalizes feet without treating them as metres', () => {
+    assert.equal(roundFeet(14_140.42), 14_140);
+    assert.equal(feetToMiles(40_026.248), 7.6);
+    assert.equal(feetToInches(1.5), 18);
+  });
+
+  it('preserves missing measurements', () => {
+    assert.equal(roundFeet(null), null);
+    assert.equal(feetToMiles(null), null);
+    assert.equal(feetToInches(null), null);
   });
 });
