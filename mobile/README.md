@@ -27,3 +27,5 @@ The check runs the Expo ESLint configuration, strict TypeScript checks, network-
 ## Scope
 
 This milestone deliberately excludes ranking, numeric scores, AI advice, travel estimates, crowds, maps, radar, alerts, saved resorts, pass data, and inferred surface quality. Missing values are displayed as unavailable and never interpreted as zero.
+
+Weather freshness comes from the backend's successful provider-fetch timestamp, not the phone's request time. The API also supplies an explicit source and a nullable provider model-run timestamp; the UI labels an unavailable model run without inventing one.

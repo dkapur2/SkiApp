@@ -4,6 +4,7 @@ export const elevationKeys = ['base', 'mid', 'peak'] as const;
 export type ElevationKey = (typeof elevationKeys)[number];
 
 const nullableNumber = z.number().finite().nullable();
+const isoTimestamp = z.string().datetime({ offset: true });
 
 export const resortMetadataSchema = z.object({
   id: z.string().min(1),
@@ -95,9 +96,16 @@ const skiConditionsSchema = z.object({
   source: z.literal('ski-api'),
 });
 
+export const weatherMetadataSchema = z.object({
+  source: z.literal('open-meteo'),
+  fetched_at: isoTimestamp,
+  model_run_at: isoTimestamp.nullable(),
+});
+
 export const resortConditionsSchema = z.object({
   resort: z.string().min(1),
   state: z.string().min(2),
+  weather_metadata: weatherMetadataSchema,
   next_12_hours: z.array(hourlySnapshotSchema),
   forecast: z.array(dailyForecastSchema),
   ski_conditions: skiConditionsSchema.nullable(),
@@ -107,4 +115,5 @@ export type ResortMetadata = z.infer<typeof resortMetadataSchema>;
 export type HourlyElevationData = z.infer<typeof hourlyElevationSchema>;
 export type DailyElevationData = z.infer<typeof dailyElevationSchema>;
 export type DailyForecast = z.infer<typeof dailyForecastSchema>;
+export type WeatherMetadata = z.infer<typeof weatherMetadataSchema>;
 export type ResortConditions = z.infer<typeof resortConditionsSchema>;

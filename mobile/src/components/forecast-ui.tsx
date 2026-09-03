@@ -1,10 +1,18 @@
 import type { PropsWithChildren } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
-import type { ElevationKey } from '@/api/contracts';
+import type { ElevationKey, WeatherMetadata } from '@/api/contracts';
 import { AppText } from '@/components/typography';
 import { minimumTargetSize, radius, spacing, useSkiTheme } from '@/design/tokens';
 import { elevationLabel, formatAge } from '@/utils/forecast';
+
+const WEATHER_SOURCES = {
+  'open-meteo': {
+    label: 'Open-Meteo forecast',
+    attribution: 'Weather data by Open-Meteo.com · CC BY 4.0',
+    url: 'https://open-meteo.com/',
+  },
+} as const;
 
 export function Card({ children, tone = 'surface' }: PropsWithChildren<{ tone?: 'surface' | 'raised' }>) {
   const theme = useSkiTheme();
@@ -109,27 +117,34 @@ export function Notice({
 }
 
 export function FreshnessBlock({
-  weatherReceivedAt,
+  weather,
   operationsFetchedAt,
 }: {
-  weatherReceivedAt: number;
+  weather: WeatherMetadata;
   operationsFetchedAt?: string | null;
 }) {
   const theme = useSkiTheme();
+  const source = WEATHER_SOURCES[weather.source];
   return (
     <View style={[styles.sources, { borderTopColor: theme.line }]}>
       <AppText variant="label" tone="faint">Sources & freshness</AppText>
       <View style={styles.sourceRow}>
-        <AppText variant="support">Weather forecast</AppText>
-        <AppText variant="support" tone="soft">Retrieved {formatAge(weatherReceivedAt)}</AppText>
+        <AppText variant="support">{source.label}</AppText>
+        <AppText variant="support" tone="soft">Server fetched {formatAge(weather.fetched_at)}</AppText>
       </View>
       <Pressable
         accessibilityRole="link"
         accessibilityLabel="Open Open-Meteo weather data source"
-        onPress={() => void Linking.openURL('https://open-meteo.com/')}
+        onPress={() => void Linking.openURL(source.url)}
         style={({ pressed }) => [styles.linkTarget, pressed && styles.pressed]}>
-        <AppText variant="support" tone="brand">Weather data by Open-Meteo.com · CC BY 4.0</AppText>
+        <AppText variant="support" tone="brand">{source.attribution}</AppText>
       </Pressable>
+      <View style={styles.sourceRow}>
+        <AppText variant="support">Provider model run</AppText>
+        <AppText variant="support" tone="soft">
+          {weather.model_run_at ? formatAge(weather.model_run_at) : 'Not provided'}
+        </AppText>
+      </View>
       <View style={styles.sourceRow}>
         <AppText variant="support">Resort operations</AppText>
         <AppText variant="support" tone="soft">

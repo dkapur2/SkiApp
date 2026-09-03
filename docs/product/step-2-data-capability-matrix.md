@@ -5,9 +5,9 @@ The prototype includes future-state concepts so that the information architectur
 | Product signal | Available now | Source today | Needed before shipping the concept |
 | --- | --- | --- | --- |
 | Resort name, state, coordinates, and three elevations | Yes | TypeScript resort catalog | Validate coordinates and migration source during Step 3 |
-| Next 12 hours at base, mid, and peak | Yes | Open-Meteo adapter | Preserve attribution and expose freshness/error metadata |
+| Next 12 hours at base, mid, and peak | Yes | Open-Meteo adapter | Source and server-fetch metadata are exposed; add provider model-run time only when reliably available |
 | Daily forecast at base, mid, and peak | Yes | Open-Meteo adapter | Define reliable decision horizon; visually deemphasize long-range uncertainty |
-| Snowfall, rain, temperature, wind, gust, visibility, cloud, and freezing level | Yes | Open-Meteo adapter | Validate null/zero semantics and unit conversions |
+| Snowfall, rain, temperature, wind, gust, visibility, cloud, and freezing level | Yes | Open-Meteo adapter | Null/zero semantics and imperial length conversions are regression-tested; continue provider validation |
 | Lift, run, snow report, and resort status | Optional and incomplete | Ski API adapter when configured | Coverage audit, licensing review, independent freshness, and unknown-state UI |
 | AI recommendation | Optional | Anthropic adapter when configured | Keep behind deterministic facts; add structured, testable explanation inputs |
 | Nearby resorts and radius filters | No | — | Step 3 PostGIS geography point and `ST_DWithin` query |

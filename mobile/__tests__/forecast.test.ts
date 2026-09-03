@@ -2,7 +2,7 @@ import {
   formatAge,
   formatMeasurement,
   hasEnoughForecastData,
-  isClientDataStale,
+  isWeatherDataStale,
   weatherIsPartial,
 } from '@/utils/forecast';
 
@@ -17,8 +17,9 @@ describe('forecast presentation rules', () => {
 
   it('marks a forecast stale after thirty minutes', () => {
     const now = Date.UTC(2026, 0, 17, 12, 31);
-    expect(isClientDataStale(now - 31 * 60_000, now)).toBe(true);
-    expect(isClientDataStale(now - 29 * 60_000, now)).toBe(false);
+    expect(isWeatherDataStale('2026-01-17T12:00:00.000Z', now)).toBe(true);
+    expect(isWeatherDataStale('2026-01-17T12:02:00.000Z', now)).toBe(false);
+    expect(isWeatherDataStale('not-a-date', now)).toBe(true);
     expect(formatAge(now - 31 * 60_000, now)).toBe('31 min ago');
   });
 
