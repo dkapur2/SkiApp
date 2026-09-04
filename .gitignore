@@ -23,3 +23,8 @@ venv/
 
 # Local tooling state
 .codex-log/
+
+# Expo local and generated native state
+.expo/
+mobile/ios/
+mobile/android/

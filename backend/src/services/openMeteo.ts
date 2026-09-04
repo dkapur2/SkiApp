@@ -10,6 +10,8 @@ import type {
   ResortMetadata,
 } from '../types';
 import { RESORTS } from '../data/resorts';
+import { feetToInches, feetToMiles, roundFeet } from './openMeteoUnits';
+import { createWeatherMetadata, splitPrecipitationByPhase } from './openMeteoSemantics';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -48,24 +50,10 @@ const PEAK_EXTRA_HOURLY_VARS = [
 
 // Standard environmental lapse rate: 6.5 °C / 1000 m → °F per metre
 const LAPSE_RATE_F_PER_M = (6.5 / 1000.0) * 1.8; // ≈ 0.01170 °F/m
-const SNOW_WATER_RATIO = 10.0;
-
 // Cache with 30-minute TTL
 const conditionsCache = new Cache<WeatherConditions>(1800);
 
 // ── Unit helpers ──────────────────────────────────────────────────────────────
-
-function mToIn(v: number | null): number | null {
-  return v !== null ? Math.round(v * 39.3701 * 100) / 100 : null;
-}
-
-function mToMi(v: number | null): number | null {
-  return v !== null ? Math.round((v / 1609.34) * 10) / 10 : null;
-}
-
-function mToFt(v: number | null): number | null {
-  return v !== null ? Math.round(v * 3.28084) : null;
-}
 
 // ── Elevation adjustment ──────────────────────────────────────────────────────
 
@@ -169,29 +157,11 @@ function dailyAgg<T>(
   return result;
 }
 
-/**
- * Split total precipitation into (snowfall_in, rain_in) based on temperature.
- * Uses a linear blend across the 32–34 °F mixed-phase zone.
- * snowfall is returned as snow depth inches (precip × 10:1 ratio).
- */
-function phaseCorrect(
-  precip: number | null,
-  tempF: number | null,
-): [number, number] {
-  if (!precip || tempF === null) return [0.0, 0.0];
-  const rainFrac = Math.max(0.0, Math.min(1.0, (tempF - 32.0) / 2.0));
-  const snowFrac = 1.0 - rainFrac;
-  return [
-    Math.round(precip * snowFrac * SNOW_WATER_RATIO * 100) / 100,
-    Math.round(precip * rainFrac * 1000) / 1000,
-  ];
-}
-
 /** Build per-elevation daily rows for one elevation view of the data. */
 function elevationDays(data: OpenMeteoResponse): Record<string, Omit<DailyElevationData, 'elevation_ft'>> {
   const d = data.daily;
-  const snowDepthMax = dailyAgg(data, 'snow_depth', vals => mToIn(Math.max(...vals)));
-  const visibilityMin = dailyAgg(data, 'visibility', vals => mToMi(Math.min(...vals)));
+  const snowDepthMax = dailyAgg(data, 'snow_depth', vals => feetToInches(Math.max(...vals)));
+  const visibilityMin = dailyAgg(data, 'visibility', vals => feetToMiles(Math.min(...vals)));
 
   const result: Record<string, Omit<DailyElevationData, 'elevation_ft'>> = {};
   for (let i = 0; i < d.time.length; i++) {
@@ -199,7 +169,7 @@ function elevationDays(data: OpenMeteoResponse): Record<string, Omit<DailyElevat
     const hi = d.temperature_2m_max[i];
     const lo = d.temperature_2m_min[i];
     const meanTemp = hi !== null && lo !== null ? (hi + lo) / 2 : null;
-    const [snowfall, rain] = phaseCorrect(d.precipitation_sum[i], meanTemp);
+    const [snowfall, rain] = splitPrecipitationByPhase(d.precipitation_sum[i], meanTemp);
     result[date] = {
       high_f:            hi,
       low_f:             lo,
@@ -224,7 +194,7 @@ function hourlyElevationSnapshot(
 ): Omit<HourlyElevationData, 'elevation_ft'> {
   const h = data.hourly;
   const temp = h.temperature_2m[idx];
-  const [snowfall, rain] = phaseCorrect(h.precipitation[idx], temp);
+  const [snowfall, rain] = splitPrecipitationByPhase(h.precipitation[idx], temp);
   return {
     temperature_f:          temp,
     apparent_temperature_f: h.apparent_temperature[idx],
@@ -233,8 +203,8 @@ function hourlyElevationSnapshot(
     snowfall_in:            snowfall,
     rain_in:                rain,
     precipitation_in:       h.precipitation[idx],
-    snow_depth_in:          mToIn(h.snow_depth[idx]),
-    visibility_mi:          mToMi(h.visibility[idx]),
+    snow_depth_in:          feetToInches(h.snow_depth[idx]),
+    visibility_mi:          feetToMiles(h.visibility[idx]),
   };
 }
 
@@ -259,6 +229,7 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
 
   const allHourly = [...ELEVATION_HOURLY_VARS, ...PEAK_EXTRA_HOURLY_VARS];
   const raw = await fetchOpenMeteo(resort.latitude, resort.longitude, ELEVATION_DAILY_VARS, allHourly);
+  const providerFetchedAt = new Date();
 
   const modelElev = raw.elevation ?? resort.mid_elevation;
   const baseData  = atElevation(raw, modelElev, resort.base_elevation);
@@ -277,7 +248,7 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
   const freezingLevelByDate = dailyAgg(
     peakData,
     'freezinglevel_height',
-    vals => mToFt(vals.reduce((a, b) => a + b, 0) / vals.length),
+    vals => roundFeet(vals.reduce((a, b) => a + b, 0) / vals.length),
   );
 
   const baseElevFt = Math.round(resort.base_elevation * 3.28084);
@@ -286,7 +257,7 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
 
   const forecast: DailyForecast[] = peakData.daily.time.map(date => ({
     date,
-    cloud_cover_avg_pct:   cloudCoverByDate[date] ?? 0,
+    cloud_cover_avg_pct:   cloudCoverByDate[date] ?? null,
     avg_freezing_level_ft: (freezingLevelByDate[date] as number | null) ?? null,
     base: { elevation_ft: baseElevFt, ...baseDays[date] },
     mid:  { elevation_ft: midElevFt,  ...midDays[date]  },
@@ -303,7 +274,7 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
     next12Hours.push({
       time:              times[idx],
       cloud_cover_pct:   peakH.cloudcover[idx],
-      freezing_level_ft: mToFt(peakH.freezinglevel_height[idx]),
+      freezing_level_ft: roundFeet(peakH.freezinglevel_height[idx]),
       base: { elevation_ft: baseElevFt, ...hourlyElevationSnapshot(baseData, idx) },
       mid:  { elevation_ft: midElevFt,  ...hourlyElevationSnapshot(midData,  idx) },
       peak: { elevation_ft: peakElevFt, ...hourlyElevationSnapshot(peakData, idx) },
@@ -313,6 +284,7 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
   const result: WeatherConditions = {
     resort:        resort.name,
     state:         resort.state,
+    weather_metadata: createWeatherMetadata(providerFetchedAt),
     next_12_hours: next12Hours,
     forecast,
   };

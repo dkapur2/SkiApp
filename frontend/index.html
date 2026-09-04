@@ -819,8 +819,8 @@
   function elevSection(zone, e) {
     const label = zone === 'base' ? 'Base' : zone === 'mid' ? 'Mid' : 'Peak';
     const precipParts = [
-      e.snowfall_in   > 0          ? `❄ ${e.snowfall_in}"`          : '',
-      e.rain_in       > 0          ? `💧 ${e.rain_in}"`              : '',
+      e.snowfall_in == null ? 'Snow —' : e.snowfall_in > 0 ? `❄ ${e.snowfall_in}"` : 'Snow 0"',
+      e.rain_in == null ? 'Rain —' : e.rain_in > 0 ? `💧 ${e.rain_in}"` : 'Rain 0"',
       e.snow_depth_in != null      ? `${e.snow_depth_in}" depth`     : '',
       e.visibility_mi != null      ? `${e.visibility_mi}mi vis`      : '',
     ].filter(Boolean).join(' · ');
@@ -859,6 +859,11 @@
       const date = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
       const e = day[elev];
       const snowClass = e.snowfall_in > 0 ? 'snow-val' : 'snow-val zero';
+      const snow = e.snowfall_in == null ? '—' : `${e.snowfall_in > 0 ? '❄ ' : ''}${e.snowfall_in}"`;
+      const rain = e.rain_in == null ? '—' : `${e.rain_in > 0 ? '🌧 ' : ''}${e.rain_in}"`;
+      const cloud = day.cloud_cover_avg_pct == null
+        ? '—'
+        : `<div class="cloud-bar"><div class="cloud-bar-fill" style="width:${day.cloud_cover_avg_pct}%"></div></div>${day.cloud_cover_avg_pct}%`;
       const freeze = day.avg_freezing_level_ft != null
         ? day.avg_freezing_level_ft.toLocaleString() + ' ft' : '—';
       return `
@@ -875,16 +880,15 @@
             <span class="${tempClass(e.apparent_high_f)}">${e.apparent_high_f}°</span>
             <span class="temp-lo"> / ${e.apparent_low_f}°</span>
           </div>
-          <div class="day-cell"><span class="${snowClass}">${e.snowfall_in > 0 ? '❄ ' : ''}${e.snowfall_in}"</span></div>
-          <div class="day-cell">${e.rain_in > 0 ? '🌧 ' : ''}${e.rain_in}"</div>
+          <div class="day-cell"><span class="${snowClass}">${snow}</span></div>
+          <div class="day-cell">${rain}</div>
           <div class="day-cell">${e.max_snow_depth_in != null ? e.max_snow_depth_in + '"' : '—'}</div>
           <div class="day-cell">${e.min_visibility_mi != null ? e.min_visibility_mi + ' mi' : '—'}</div>
           <div class="day-cell wind-val">${e.max_windspeed_mph} mph</div>
           <div class="day-cell wind-val">${e.max_windgusts_mph} mph</div>
           <div class="day-cell">
             <div class="cloud-bar-wrap">
-              <div class="cloud-bar"><div class="cloud-bar-fill" style="width:${day.cloud_cover_avg_pct}%"></div></div>
-              ${day.cloud_cover_avg_pct}%
+              ${cloud}
             </div>
           </div>
           <div class="day-cell">${freeze}</div>
@@ -894,6 +898,7 @@
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function weatherIcon(snow, rain, cloud) {
+    if (snow == null || rain == null || cloud == null) return '—';
     if (snow > 0)   return '🌨';
     if (rain > 0)   return '🌧';
     if (cloud > 70) return '☁️';
