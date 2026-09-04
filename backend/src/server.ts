@@ -81,6 +81,11 @@ app.post('/recommend', async (req, res) => {
   }
 });
 
+// Do not let unmatched API paths fall through to the HTML application shell.
+app.use(['/resorts', '/recommend'], (_req, res) => {
+  res.status(404).json({ detail: 'API route not found' });
+});
+
 // ── Static frontend ───────────────────────────────────────────────────────────
 
 // __dirname is backend/dist/ after tsc, so ../../frontend resolves to project root/frontend
@@ -88,7 +93,7 @@ const frontendDir = path.join(__dirname, '..', '..', 'frontend');
 app.use(express.static(frontendDir));
 
 // Fallback: serve index.html for any unmatched GET (SPA support)
-app.get('*', (_req, res) => {
+app.get('/{*splat}', (_req, res) => {
   res.sendFile(path.join(frontendDir, 'index.html'));
 });
 
@@ -97,7 +102,9 @@ app.get('*', (_req, res) => {
 export function startServer(): void {
   const port = parseInt(process.env.PORT ?? '8000', 10);
 
-  app.listen(port, '0.0.0.0', () => {
+  app.listen(port, '0.0.0.0', (error?: Error) => {
+    if (error) throw error;
+
     console.log(`Ski app listening on port ${port}`);
 
     // Warm the Open-Meteo cache in the background — one resort every 2 s
