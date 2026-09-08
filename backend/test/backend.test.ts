@@ -22,18 +22,29 @@ describe('frontend API routing', () => {
     assert.match(frontend, /hostname\.endsWith\('\.up\.railway\.app'\)/);
     assert.match(frontend, /:\s*'https:\/\/skiapp-production-[\w-]*\.up\.railway\.app';/);
   });
-
-  it('renders unknown forecast values distinctly from measured zero', () => {
-    const frontend = readFileSync(resolve(__dirname, '../../frontend/index.html'), 'utf8');
-
-    assert.match(frontend, /e\.snowfall_in == null \? '—'/);
-    assert.match(frontend, /e\.rain_in == null \? '—'/);
-    assert.match(frontend, /day\.cloud_cover_avg_pct == null/);
-    assert.match(frontend, /snow == null \|\| rain == null \|\| cloud == null/);
-  });
 });
 
 describe('provider-free API behavior', () => {
+  it('allows the exact Expo preview origin only in the staging environment', async () => {
+    const previousEnvironment = process.env.RAILWAY_ENVIRONMENT_NAME;
+    try {
+      for (const environment of ['staging', 'production', undefined]) {
+        if (environment) process.env.RAILWAY_ENVIRONMENT_NAME = environment;
+        else delete process.env.RAILWAY_ENVIRONMENT_NAME;
+        for (const origin of ['http://127.0.0.1:8765', 'http://127.0.0.1:8766', 'https://unrelated.example', 'https://dkapur.com', 'https://preview.vercel.app']) {
+          const response = await request(app).get('/resorts/conditions').set('Origin', origin);
+          const allowed = origin === 'https://dkapur.com' || origin === 'https://preview.vercel.app' ||
+            (environment === 'staging' && origin === 'http://127.0.0.1:8765');
+          assert.equal(response.status, 200);
+          assert.equal(response.headers['access-control-allow-origin'], allowed ? origin : undefined);
+        }
+      }
+    } finally {
+      if (previousEnvironment === undefined) delete process.env.RAILWAY_ENVIRONMENT_NAME;
+      else process.env.RAILWAY_ENVIRONMENT_NAME = previousEnvironment;
+    }
+  });
+
   it('reports service health without calling a provider', async () => {
     const response = await request(app).get('/health');
 

@@ -76,4 +76,5 @@ Railway uses `/health` for deployment health checks, so a provider outage does n
 - [Milestone 1 native differences](docs/design/milestone-1-native-differences.md)
 - [Dependency audit triage](docs/security/dependency-audit-2026-09-03.md)
 - [Staging-to-production promotion checklist](docs/deployment/staging-to-production.md)
+- [Weather attribution, freshness, and commercial-use acceptance](docs/deployment/weather-attribution-and-freshness.md)
 - [Repository instructions](AGENTS.md)
