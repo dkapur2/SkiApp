@@ -66,6 +66,7 @@ Railway uses `/health` for deployment health checks, so a provider outage does n
 
 ## Documentation
 
+- [September 8 production release and staging review evidence](docs/deployment/releases/2026-09-08-foundation-and-experiment.md)
 - [Codex setup](docs/CODEX_SETUP.md)
 - [Architecture decision 0001](docs/architecture/0001-stabilize-current-stack.md)
 - [Step 2 mobile product definition](docs/product/step-2-mobile-product.md)
