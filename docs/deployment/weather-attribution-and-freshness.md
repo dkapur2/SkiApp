@@ -23,7 +23,9 @@ For browser acceptance of the clean Expo export, the API allows the exact origin
 
 [Open-Meteo's terms](https://open-meteo.com/en/terms) restrict the free API to non-commercial use and impose request limits. Advertising, subscriptions, and use in a commercial product are listed as commercial uses. [Paid API plans](https://open-meteo.com/en/pricing) provide commercial access through the customer endpoint and a server-side API key.
 
-**Unresolved:** this repository still calls the free `api.open-meteo.com` endpoint. A paid entitlement, applicable usage budget, and whether the planned release is non-commercial have not been verified. Before any commercial launch, the owner must establish the appropriate entitlement and separately authorize server-side endpoint/key configuration. Adding attribution alone does not resolve this requirement. No subscription, purchase, or credential change is performed here.
+**Development decision (September 8, 2026):** the owner authorizes the existing free `api.open-meteo.com` endpoint for non-commercial evaluation/prototyping. Keep the current provider and endpoint; no purchase or credential change is authorized. This does not authorize a commercial launch or merge the pending foundation promotion.
+
+**Remaining launch requirements:** paid entitlement and the applicable usage budget remain unverified. Before any commercial launch, the owner must establish the appropriate entitlement and separately authorize server-side customer endpoint/key configuration and retesting. Adding attribution alone does not resolve this requirement. See [current project status](../project-status.md).
 
 The optional operations adapter identifies itself as `ski-api`. Its RapidAPI subscription and redistribution/display permissions have not been verified; confirm those before commercially publishing operations data. Weather attribution does not cover this separate provider.
 

@@ -15,7 +15,7 @@ The prototype includes future-state concepts so that the information architectur
 | Travel time | No | — | Routing provider, commercial terms, caching, origin consent, and fallback to straight-line distance |
 | User location | No | — | Explicit permission flow and manual-origin alternative |
 | Condition score | No | — | Versioned deterministic model, validation data, uncertainty, tests, and explanation contract |
-| Surface interpretation | No | — | Deterministic freeze–thaw/rain/snow logic validated against observations |
+| Surface interpretation | No shipping capability; isolated experiment only | [Freeze–thaw v0.1.0 model and synthetic fixtures](../analysis/experimental-freeze-thaw.md) | Hourly provider normalization, real-condition validation and separately reviewed integration; no numeric condition score |
 | Crowds | No | — | Credible source or user-derived model; do not infer without evidence |
 | Radar and nowcast | No | — | Step 5 licensed provider or NOAA MRMS pipeline, map tiles, attribution, and cost controls |
 | Favorites | No persistent support | — | Local-first storage in Expo, followed by account sync only if justified |

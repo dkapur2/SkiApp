@@ -1,5 +1,7 @@
 # Dependency audit triage — 2026-09-03
 
+Historical snapshot; the Express 5 migration has since completed on staging. See [current project/security status](../project-status.md) for the latest review and release references. The original results below are retained unchanged.
+
 This review was performed from the Step 1 foundation close-out branch with the checked-in lockfiles.
 
 ## Commands reviewed
