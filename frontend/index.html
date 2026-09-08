@@ -79,6 +79,20 @@
       margin-left: .1rem;
     }
 
+    .sources-freshness {
+      margin-top: 1.25rem;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text2);
+      font-size: .85rem;
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+    .sources-freshness h3 { font-size: .9rem; color: var(--text); }
+    .sources-freshness a { color: var(--accent); text-decoration: underline; }
+    .sources-freshness .freshness-warning { color: #fbbf24; }
+
     /* ── Search ──────────────────────────────────────────────────────────── */
     .search-wrap {
       flex: 1;
@@ -667,6 +681,7 @@
   // ── Select resort ─────────────────────────────────────────────────────────
   async function selectResort(id, name) {
     currentResortId = id;
+    currentConditions = null;
     dropdownEl.classList.remove('open');
     searchEl.value = name;
     clearBtn.classList.add('visible');
@@ -707,6 +722,9 @@
           <span class="elev-pill peak">Peak ${meta.peak_elevation_ft.toLocaleString()} ft</span>
         </div>
         <div class="ai-panel" id="ai-panel"></div>
+        <section class="sources-freshness" id="sources-freshness" aria-label="Sources and freshness">
+          ${renderFreshness(data)}
+        </section>
       </div>
 
       <div class="hourly-section">
@@ -828,10 +846,10 @@
       <div class="h-elev-section h-${zone}">
         <div class="h-elev-label">${label} <span class="h-elev-ft">${e.elevation_ft.toLocaleString()}ft</span></div>
         <div class="h-elev-temp">
-          <span class="${tempClass(e.temperature_f)}">${e.temperature_f}°</span>
-          <span class="h-feels"> / Feels ${e.apparent_temperature_f}°</span>
+          <span class="${tempClass(e.temperature_f)}">${measurement(e.temperature_f, '°')}</span>
+          <span class="h-feels"> / Feels ${measurement(e.apparent_temperature_f, '°')}</span>
         </div>
-        <div class="h-elev-wind">${e.windspeed_mph} mph · Gusts ${e.windgusts_mph} mph</div>
+        <div class="h-elev-wind">${measurement(e.windspeed_mph, ' mph')} · Gusts ${measurement(e.windgusts_mph, ' mph')}</div>
         ${precipParts ? `<div class="h-elev-precip">${precipParts}</div>` : ''}
       </div>`;
   }
@@ -873,19 +891,19 @@
             <div class="date">${date}</div>
           </div>
           <div class="day-cell">
-            <span class="temp-hi ${tempClass(e.high_f)}">${e.high_f}°</span>
-            <span class="temp-lo"> / ${e.low_f}°</span>
+            <span class="temp-hi ${tempClass(e.high_f)}">${measurement(e.high_f, '°')}</span>
+            <span class="temp-lo"> / ${measurement(e.low_f, '°')}</span>
           </div>
           <div class="day-cell">
-            <span class="${tempClass(e.apparent_high_f)}">${e.apparent_high_f}°</span>
-            <span class="temp-lo"> / ${e.apparent_low_f}°</span>
+            <span class="${tempClass(e.apparent_high_f)}">${measurement(e.apparent_high_f, '°')}</span>
+            <span class="temp-lo"> / ${measurement(e.apparent_low_f, '°')}</span>
           </div>
           <div class="day-cell"><span class="${snowClass}">${snow}</span></div>
           <div class="day-cell">${rain}</div>
           <div class="day-cell">${e.max_snow_depth_in != null ? e.max_snow_depth_in + '"' : '—'}</div>
           <div class="day-cell">${e.min_visibility_mi != null ? e.min_visibility_mi + ' mi' : '—'}</div>
-          <div class="day-cell wind-val">${e.max_windspeed_mph} mph</div>
-          <div class="day-cell wind-val">${e.max_windgusts_mph} mph</div>
+          <div class="day-cell wind-val">${measurement(e.max_windspeed_mph, ' mph')}</div>
+          <div class="day-cell wind-val">${measurement(e.max_windgusts_mph, ' mph')}</div>
           <div class="day-cell">
             <div class="cloud-bar-wrap">
               ${cloud}
@@ -897,6 +915,56 @@
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+  function measurement(value, unit) {
+    return typeof value === 'number' && Number.isFinite(value) ? `${value}${unit}` : '—';
+  }
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[char]);
+  }
+  function timestamp(value) {
+    // Require a timezone; missing dates must never become epoch or device time.
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value)) return null;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  function timestampLabel(value, missingLabel = 'Unavailable') {
+    const parsed = timestamp(value);
+    if (parsed === null) return missingLabel;
+    const iso = new Date(parsed).toISOString();
+    return `<time datetime="${iso}">${iso.replace('T', ' ').replace('.000Z', ' UTC').replace('Z', ' UTC')}</time>`;
+  }
+  function fetchFreshness(value) {
+    const parsed = timestamp(value);
+    if (parsed === null) return '<span class="freshness-warning">Freshness unavailable</span>';
+    const age = Date.now() - parsed;
+    if (age < -60_000) return '<span class="freshness-warning">Fetch time is ahead of this device; freshness unavailable</span>';
+    if (age > 30 * 60_000) return '<span class="freshness-warning">Stale — fetched more than 30 minutes ago</span>';
+    return 'Fetched within the last 30 minutes';
+  }
+  function renderFreshness(data) {
+    const weather = data.weather_metadata;
+    const source = weather?.source;
+    const attribution = source === 'open-meteo'
+      ? '<a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Weather data by Open-Meteo.com</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a><p>Elevation adjustments and unit conversions by SkiTheEast.</p>'
+      : '';
+    const operations = data.ski_conditions;
+    return `<h3>Sources &amp; freshness</h3>
+      <p>Weather source: ${source === 'open-meteo' ? 'Open-Meteo' : source ? escapeHtml(source) : 'Unavailable'}</p>
+      ${attribution}
+      <p>Weather server fetch: ${timestampLabel(weather?.fetched_at)} · ${fetchFreshness(weather?.fetched_at)}</p>
+      <p>Provider model run: ${timestampLabel(weather?.model_run_at, 'Not provided')}</p>
+      <p>Resort operations${operations?.source ? ` (${escapeHtml(operations.source)})` : ''}: ${operations ? `server fetch ${timestampLabel(operations.fetched_at)} · ${fetchFreshness(operations.fetched_at)}` : 'Unavailable'}</p>
+      <p>Weather values are forecasts, not observations. — means unavailable; 0 is a measured zero. Fetch time is when the server retrieved data, not when the model ran.</p>`;
+  }
+  function refreshFreshness() {
+    const panel = document.getElementById('sources-freshness');
+    if (panel && currentConditions) panel.innerHTML = renderFreshness(currentConditions);
+  }
+  setInterval(refreshFreshness, 60_000);
+  document.addEventListener('visibilitychange', refreshFreshness);
+
   function weatherIcon(snow, rain, cloud) {
     if (snow == null || rain == null || cloud == null) return '—';
     if (snow > 0)   return '🌨';
@@ -906,6 +974,7 @@
     return '☀️';
   }
   function tempClass(f) {
+    if (f == null || !Number.isFinite(f)) return '';
     if (f < 20)  return 't-cold';
     if (f < 32)  return 't-freeze';
     if (f < 45)  return 't-cool';

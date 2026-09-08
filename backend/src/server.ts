@@ -15,11 +15,18 @@ export const app = express();
 app.use(express.json());
 
 app.use(cors({
-  origin: [
-    'https://dkapur.com',
-    'https://www.dkapur.com',
-    /^https:\/\/.*\.vercel\.app$/,
-  ],
+  origin(origin, callback) {
+    const existingOrigin = origin !== undefined && (
+      origin === 'https://dkapur.com' ||
+      origin === 'https://www.dkapur.com' ||
+      /^https:\/\/.*\.vercel\.app$/.test(origin)
+    );
+    // The local Expo acceptance export calls staging directly. Never enable
+    // this preview origin in production or for arbitrary loopback ports.
+    const stagingPreview = process.env.RAILWAY_ENVIRONMENT_NAME === 'staging' &&
+      origin === 'http://127.0.0.1:8765';
+    callback(null, existingOrigin || stagingPreview);
+  },
   methods: ['GET', 'POST'],
 }));
 
