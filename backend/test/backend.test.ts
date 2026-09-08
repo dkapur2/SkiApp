@@ -62,6 +62,81 @@ describe('provider-free API behavior', () => {
     assert.equal(response.status, 400);
     assert.equal(response.body.detail, 'resort_name is required');
   });
+
+  it('rejects a missing recommendation body before calling a provider', async () => {
+    const response = await request(app).post('/recommend');
+
+    assert.equal(response.status, 400);
+    assert.equal(response.body.detail, 'resort_name is required');
+  });
+
+  it('rejects malformed JSON', async () => {
+    const response = await request(app)
+      .post('/recommend')
+      .set('Content-Type', 'application/json')
+      .send('{"resort_name":');
+
+    assert.equal(response.status, 400);
+  });
+
+  it('returns JSON 404s for unmatched API routes', async () => {
+    const response = await request(app).get('/resorts/not-an-api-route');
+
+    assert.equal(response.status, 404);
+    assert.match(response.headers['content-type'], /^application\/json/);
+    assert.deepEqual(response.body, { detail: 'API route not found' });
+  });
+
+  it('serves the static frontend at the root, as an asset, and for nested app routes', async () => {
+    for (const route of ['/', '/index.html', '/saved/mountains']) {
+      const response = await request(app).get(route);
+
+      assert.equal(response.status, 200);
+      assert.match(response.headers['content-type'], /^text\/html/);
+      assert.match(response.text, /<title>Ski Conditions<\/title>/);
+    }
+  });
+});
+
+describe('provider-backed route behavior without network access', () => {
+  it('returns a known resort forecast with existing metadata and null semantics', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify(openMeteoFixture()), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    });
+
+    try {
+      const response = await request(app).get('/resorts/bear-creek/conditions');
+
+      assert.equal(response.status, 200);
+      assert.equal(response.body.resort, 'Bear Creek');
+      assert.equal(response.body.weather_metadata.source, 'open-meteo');
+      assert.equal(response.body.weather_metadata.model_run_at, null);
+      assert.equal(response.body.next_12_hours[0].base.snowfall_in, null);
+      assert.equal(response.body.next_12_hours[1].base.snowfall_in, 0);
+      assert.equal(response.body.forecast[0].base.rain_in, null);
+      assert.equal(response.body.forecast[1].base.rain_in, 0);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('converts an asynchronous weather-provider failure into a 502 response', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      throw new Error('provider unavailable');
+    };
+
+    try {
+      const response = await request(app).get('/resorts/blue-knob/conditions');
+
+      assert.equal(response.status, 502);
+      assert.match(response.body.detail, /provider unavailable/);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
 
 describe('Cache', () => {
