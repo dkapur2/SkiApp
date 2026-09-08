@@ -22,18 +22,29 @@ describe('frontend API routing', () => {
     assert.match(frontend, /hostname\.endsWith\('\.up\.railway\.app'\)/);
     assert.match(frontend, /:\s*'https:\/\/skiapp-production-[\w-]*\.up\.railway\.app';/);
   });
-
-  it('renders unknown forecast values distinctly from measured zero', () => {
-    const frontend = readFileSync(resolve(__dirname, '../../frontend/index.html'), 'utf8');
-
-    assert.match(frontend, /e\.snowfall_in == null \? '—'/);
-    assert.match(frontend, /e\.rain_in == null \? '—'/);
-    assert.match(frontend, /day\.cloud_cover_avg_pct == null/);
-    assert.match(frontend, /snow == null \|\| rain == null \|\| cloud == null/);
-  });
 });
 
 describe('provider-free API behavior', () => {
+  it('allows the exact Expo preview origin only in the staging environment', async () => {
+    const previousEnvironment = process.env.RAILWAY_ENVIRONMENT_NAME;
+    try {
+      for (const environment of ['staging', 'production', undefined]) {
+        if (environment) process.env.RAILWAY_ENVIRONMENT_NAME = environment;
+        else delete process.env.RAILWAY_ENVIRONMENT_NAME;
+        for (const origin of ['http://127.0.0.1:8765', 'http://127.0.0.1:8766', 'https://unrelated.example', 'https://dkapur.com', 'https://preview.vercel.app']) {
+          const response = await request(app).get('/resorts/conditions').set('Origin', origin);
+          const allowed = origin === 'https://dkapur.com' || origin === 'https://preview.vercel.app' ||
+            (environment === 'staging' && origin === 'http://127.0.0.1:8765');
+          assert.equal(response.status, 200);
+          assert.equal(response.headers['access-control-allow-origin'], allowed ? origin : undefined);
+        }
+      }
+    } finally {
+      if (previousEnvironment === undefined) delete process.env.RAILWAY_ENVIRONMENT_NAME;
+      else process.env.RAILWAY_ENVIRONMENT_NAME = previousEnvironment;
+    }
+  });
+
   it('reports service health without calling a provider', async () => {
     const response = await request(app).get('/health');
 
@@ -61,6 +72,81 @@ describe('provider-free API behavior', () => {
 
     assert.equal(response.status, 400);
     assert.equal(response.body.detail, 'resort_name is required');
+  });
+
+  it('rejects a missing recommendation body before calling a provider', async () => {
+    const response = await request(app).post('/recommend');
+
+    assert.equal(response.status, 400);
+    assert.equal(response.body.detail, 'resort_name is required');
+  });
+
+  it('rejects malformed JSON', async () => {
+    const response = await request(app)
+      .post('/recommend')
+      .set('Content-Type', 'application/json')
+      .send('{"resort_name":');
+
+    assert.equal(response.status, 400);
+  });
+
+  it('returns JSON 404s for unmatched API routes', async () => {
+    const response = await request(app).get('/resorts/not-an-api-route');
+
+    assert.equal(response.status, 404);
+    assert.match(response.headers['content-type'], /^application\/json/);
+    assert.deepEqual(response.body, { detail: 'API route not found' });
+  });
+
+  it('serves the static frontend at the root, as an asset, and for nested app routes', async () => {
+    for (const route of ['/', '/index.html', '/saved/mountains']) {
+      const response = await request(app).get(route);
+
+      assert.equal(response.status, 200);
+      assert.match(response.headers['content-type'], /^text\/html/);
+      assert.match(response.text, /<title>Ski Conditions<\/title>/);
+    }
+  });
+});
+
+describe('provider-backed route behavior without network access', () => {
+  it('returns a known resort forecast with existing metadata and null semantics', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify(openMeteoFixture()), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    });
+
+    try {
+      const response = await request(app).get('/resorts/bear-creek/conditions');
+
+      assert.equal(response.status, 200);
+      assert.equal(response.body.resort, 'Bear Creek');
+      assert.equal(response.body.weather_metadata.source, 'open-meteo');
+      assert.equal(response.body.weather_metadata.model_run_at, null);
+      assert.equal(response.body.next_12_hours[0].base.snowfall_in, null);
+      assert.equal(response.body.next_12_hours[1].base.snowfall_in, 0);
+      assert.equal(response.body.forecast[0].base.rain_in, null);
+      assert.equal(response.body.forecast[1].base.rain_in, 0);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('converts an asynchronous weather-provider failure into a 502 response', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      throw new Error('provider unavailable');
+    };
+
+    try {
+      const response = await request(app).get('/resorts/blue-knob/conditions');
+
+      assert.equal(response.status, 502);
+      assert.match(response.body.detail, /provider unavailable/);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
 
