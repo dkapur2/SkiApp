@@ -66,6 +66,8 @@ Railway uses `/health` for deployment health checks, so a provider outage does n
 
 ## Documentation
 
+- [Current project status and launch requirements](docs/project-status.md)
+- [Experimental freeze–thaw model and validation plan](docs/analysis/experimental-freeze-thaw.md)
 - [Codex setup](docs/CODEX_SETUP.md)
 - [Architecture decision 0001](docs/architecture/0001-stabilize-current-stack.md)
 - [Step 2 mobile product definition](docs/product/step-2-mobile-product.md)
@@ -74,7 +76,7 @@ Railway uses `/health` for deployment health checks, so a provider outage does n
 - [Step 2 clickable prototype](design/step-2/README.md)
 - [Claude Design mobile v2 handoff](design/claude-handoff/2026-09-02-mobile-v2/IMPORT.md)
 - [Milestone 1 native differences](docs/design/milestone-1-native-differences.md)
-- [Dependency audit triage](docs/security/dependency-audit-2026-09-03.md)
+- [Historical September 3 dependency audit](docs/security/dependency-audit-2026-09-03.md)
 - [Staging-to-production promotion checklist](docs/deployment/staging-to-production.md)
 - [Weather attribution, freshness, and commercial-use acceptance](docs/deployment/weather-attribution-and-freshness.md)
 - [Repository instructions](AGENTS.md)
