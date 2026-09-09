@@ -23,7 +23,7 @@ For browser acceptance of the clean Expo export, the API allows the exact origin
 
 [Open-Meteo's terms](https://open-meteo.com/en/terms) restrict the free API to non-commercial use and impose request limits. Advertising, subscriptions, and use in a commercial product are listed as commercial uses. [Paid API plans](https://open-meteo.com/en/pricing) provide commercial access through the customer endpoint and a server-side API key.
 
-**Development decision (September 8, 2026):** the owner authorizes the existing free `api.open-meteo.com` endpoint for non-commercial evaluation/prototyping. Keep the current provider and endpoint; no purchase or credential change is authorized. This does not authorize a commercial launch or merge the pending foundation promotion.
+**Development decision (September 8–9, 2026):** the owner authorizes the existing free `api.open-meteo.com` endpoint for non-commercial evaluation/prototyping. Keep the current provider and endpoint; no purchase or credential change is authorized. The foundation promotion was separately authorized and completed through PR #9. The production acceptance target is `https://skiapp-production-a4ad.up.railway.app`; `dkapur.com` is not a SkiTheEast endpoint. This does not authorize a commercial launch or production promotion of the experiment.
 
 **Remaining launch requirements:** paid entitlement and the applicable usage budget remain unverified. Before any commercial launch, the owner must establish the appropriate entitlement and separately authorize server-side customer endpoint/key configuration and retesting. Adding attribution alone does not resolve this requirement. See [current project status](../project-status.md).
 

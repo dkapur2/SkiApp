@@ -41,7 +41,7 @@ describe('experimental freeze–thaw scenarios', () => {
     assert.match(result.signals[0].reason, /wetness and ice are not observed/);
   });
 
-  it('does not treat rain during/after the freezing onset as rain before freezing', () => {
+  it('requires the rain interval to end strictly before the first cold sample', () => {
     for (const rainAt of [1, 2, 3]) {
       const result = analyzeFreezeThaw(scenario(i => ({
         temperatureC: i === 1 || i === 2 ? -2 : 0,
