@@ -1,4 +1,4 @@
-# Foundation promotion and experimental staging review — September 8, 2026
+# Foundation promotion and experimental staging review — September 8–9, 2026
 
 This evidence is a separate documentation change. It does not add code to either release, authorize a rollback, change DNS, or promote the freeze–thaw experiment to production.
 
@@ -31,7 +31,7 @@ Rendered production browser acceptance on the Railway URL PASS at 23:07:51 UTC: 
 
 Bounded logs for the exact production deployment showed successful startup on port 8080 and no unexpected runtime errors. The deliberate malformed-JSON smoke generated one expected SyntaxError. Railway HTTP logs associated successful health/catalog/forecast/static requests and expected invalid-request responses with deployment `2062a64d-5404-476e-91c5-a328e4e894d4`.
 
-## Custom-domain discrepancy and phase boundary
+## Historical custom-domain discrepancy and resolved phase boundary
 
 Railway lists `dkapur.com` on the production service, but public requests at 23:07 UTC reached Vercel:
 
@@ -40,11 +40,26 @@ Railway lists `dkapur.com` on the production service, but public requests at 23:
 - `https://www.dkapur.com/`: 307 redirect to the apex, served by Vercel.
 - The local DNS lookup returned `64.29.17.1` and `64.29.17.65` for the apex.
 
-This is evidence of a domain-assignment discrepancy, not evidence that the new Railway image failed. No DNS or Vercel changes were made, and no rollback/redeployment was attempted. The owner was asked whether the verified Railway URL is the intended production acceptance target for evaluation or whether Phase 2 must remain paused for the custom-domain decision. Do not repoint an active portfolio domain without explicit authorization. If a SkiTheEast custom domain is required, choose the intended host, configure its DNS/Railway assignment separately, and repeat domain-specific browser/API acceptance. Reverting application code would not by itself correct this routing discrepancy.
+At that time this was evidence of a domain-assignment discrepancy, not a failed Railway image. No DNS or Vercel changes were made, and no rollback/redeployment was attempted. Phase 2 was paused for the owner's production acceptance-target decision. The failed portfolio probes above are retained as historical evidence; reverting application code would not correct that routing discrepancy.
 
-## Phase 2 status
+**Resolved September 9:** the owner selected [the Railway production URL](https://skiapp-production-a4ad.up.railway.app) for SkiTheEast non-commercial evaluation. `dkapur.com` is the intended Vercel portfolio and is not a SkiApp acceptance endpoint. Railway production was rechecked before resuming Phase 2: deployment `2062a64d-5404-476e-91c5-a328e4e894d4` remained SUCCESS at `dd2fd3ca47208bf4bd8cf1cd4d8ea091d4f1f3d8`, with `/health` returning 200 `{status:ok}`. The acceptance-target question no longer blocks PR #10.
 
-[PR #10](https://github.com/dkapur2/SkiApp/pull/10) remains OPEN at `dd472152401a0d9fab209a2e5a0a3e6087f372a3`, targeting staging. Its initial head/base, mergeability and green backend/mobile CI were verified. The detailed Phase 2 review and merge are paused pending the production acceptance-domain decision above. No experiment code has entered main or the production deployment.
+**Separate cleanup proposal, not performed:** inventory consumers of the obsolete `dkapur.com`/`www.dkapur.com` backend CORS entries, then remove those entries and their corresponding tests/documentation in a focused reviewed change. Separately remove the unused Railway custom-domain association after confirming it is unused. Preserve the portfolio's DNS and Vercel configuration. No DNS, domain configuration or CORS changes belong to this release/review task.
+
+## Phase 2: experimental staging review and acceptance
+
+[PR #10](https://github.com/dkapur2/SkiApp/pull/10), `codex/experimental-freeze-thaw` → `staging`, merged September 9 at 23:46:58 UTC under the owner's authorization. Initial head `dd472152401a0d9fab209a2e5a0a3e6087f372a3` was reviewed in full. Final reviewed head: `f222e237575b3dfbec30ee6659073c626d9506b1`; staging merge: **`fb9d8fc231ddbbfae37ab9c65a7ce35892789735`**.
+
+- Actual implementation review covered deterministic rules, UTC hour boundaries, 48-hour history/24-hour horizon, preceding-hour precipitation intervals, inclusive thresholds, repeated cycles, null versus zero, stale/future/missing provenance, elevation consistency and insufficient-data behavior. No blocking rule defect was found. The test name and analysis documentation now explicitly say rain must end strictly before the first cold sample: an interval ending exactly at that sample is conservatively excluded, even though it describes the preceding hour. No algorithm change was needed. Project/provider documentation now records the completed foundation promotion and owner decision rather than the previous pending-promotion state.
+- All nine changed files remained limited to the pure versioned TypeScript module, synthetic fixtures/tests and documentation. No provider fetch, route/client integration, startup execution, numeric condition score or invented surface/operations observation was added. No API, dependencies, mobile/Expo, PostGIS, persistent caching, maps, radar, secrets or generated files changed. Existing runtime routes/services, static frontend, mobile source, Dockerfile and backend dependency manifests are identical to the foundation release.
+- Refreshed local Node 20.20.2 checks PASS: backend lint/strict types, **47 network-free tests**, build; mobile lint/strict types, **11 tests**, Android/iOS/web export. [Final-head PR CI](https://github.com/dkapur2/SkiApp/actions/runs/34418139931) and [push CI](https://github.com/dkapur2/SkiApp/actions/runs/34418136693) PASS. [Post-merge staging CI](https://github.com/dkapur2/SkiApp/actions/runs/34418426678) PASS at the exact merge SHA: [backend](https://github.com/dkapur2/SkiApp/actions/runs/34418426678/job/102688363220) and [mobile](https://github.com/dkapur2/SkiApp/actions/runs/34418426678/job/102688363408).
+- Railway staging deployment **`e90c3c3f-eead-4b3d-ac77-9c844e3eeb9b`**, **SUCCESS**, commit **`fb9d8fc231ddbbfae37ab9c65a7ce35892789735`**. Production remained on foundation deployment `2062a64d-5404-476e-91c5-a328e4e894d4` throughout this staging acceptance.
+- Staging API regression PASS: health 200; 158 unique resorts; Killington forecast and unchanged metadata/response shape; null model-run/operations retained and 228 numeric zeros retained; missing body/malformed JSON 400; unknown resort and unmatched API paths JSON 404; root/index/nested static routes 200 with identical frontend. Provider-failure and missing-measurement behavior is covered by network-free tests, without inducing a live outage.
+- Rendered staging web regression PASS at 23:48:56 UTC: Killington loaded; linked Open-Meteo and CC BY attribution, fetch time matching `2026-09-09T23:48:49.290Z`, model run Not provided and operations Unavailable were visible. Base/Mid/Peak first daily highs were 66.8°F / 61.3°F / 55.9°F, matching API values. No page errors or production API requests occurred.
+- A new `expo export --platform all --clear` with dotenv disabled and the staging API configured succeeded. Android/iOS/web bundles contained the staging URL and no production URL. Its served web export completed Today → Killington → Resort Detail → Base/Mid/Peak at 23:50:44 UTC, with selected visual state, changing temperatures (64°F / 59°F / 53°F), visible attribution/server freshness/Not provided/Unavailable, and only staging API requests. No page errors occurred. This was rendered interaction, not export success alone; no native binary was released.
+- Separate pre-existing mobile accessibility follow-up: the Expo web radio elements omit `aria-checked` despite `accessibilityState` in source. Their visual selection and elevation-dependent content work. The smoke harness initially assumed that ARIA attribute; inspection confirmed the existing markup limitation, and functional assertions were changed to rendered content and selection. This experiment changes no mobile source. Native/device and accessibility release gates remain separate.
+
+This evidence is carried by [documentation PR #11](https://github.com/dkapur2/SkiApp/pull/11), based on foundation `main`, not the experimental staging tree. Its authorized merge contains Markdown only; any resulting production deployment is a documentation-only successor of the foundation release. The PR's merge record and post-merge checks identify that successor SHA. No freeze–thaw experiment is included in this documentation promotion.
 
 ## Audits, rollback and retained requirements
 
