@@ -1,4 +1,4 @@
-# Project status — September 9, 2026
+# Project status — September 10, 2026
 
 ## Completed foundation and acceptance
 
@@ -12,7 +12,11 @@
 
 ## Current development
 
-The [first freeze–thaw experiment](analysis/experimental-freeze-thaw.md) is an isolated TypeScript model (`freeze-thaw/0.1.0`) with 20 synthetic scenario tests and documentation. It is not connected to the provider, API, clients, recommendations or deployment startup. Outputs are experimental weather-derived surface-risk signals, never verified trail conditions or numeric condition scores. Physical validation and a separately reviewed integration are required before presenting outputs to users.
+The [first freeze–thaw experiment](analysis/experimental-freeze-thaw.md) is an isolated TypeScript model (`freeze-thaw/0.1.0`) with 20 synthetic scenario tests, merged into staging through PR #10 at `fb9d8fc231ddbbfae37ab9c65a7ce35892789735`. It is not connected to API/client requests, recommendations or deployment startup. Outputs are experimental weather-derived surface-risk signals, never verified trail conditions or numeric condition scores. Physical validation and a separately reviewed integration are required before presenting outputs to users.
+
+The current feature branch adds the [internal Open-Meteo hourly normalizer and opt-in evaluation runner](analysis/hourly-normalization-and-evaluation.md) from that verified staging baseline. Raw provider JSON is validated for UTC/SI units, array/time alignment, elevation, liquid components and provenance before invoking the unchanged model. Offline replay uses a recorded evaluation clock; explicit live mode makes one bounded free-endpoint request with no retry/cache/background work. Synthetic adapter/runner tests remain network-free. A single manual live compatibility check and identical offline replay passed; physical surface-risk accuracy remains unvalidated. This work targets staging as an unmerged PR, with no API/client/Expo changes or production deployment.
+
+Documentation PR #11 subsequently merged into main at `7538a6af8c6a389542e07829a3b8e2f88a6b5d68`, with green backend/mobile CI and Railway production `df5cfac0-0507-4bf1-86f5-d503d93552cf` SUCCESS at that SHA. The production difference from the foundation release is Markdown only; the experiment remains excluded. The resolved Railway acceptance URL and historical portfolio probes are preserved in [the release evidence](https://github.com/dkapur2/SkiApp/pull/11).
 
 Expo stays SDK 57. PostGIS, persistent caching, maps, radar and unrelated UI work remain outside this experiment. For any later mobile release, clear Metro before changing the API URL and verify the exported bundles; cached exports can retain the staging URL. Signing, accessibility and device gates remain separate.
 
@@ -25,6 +29,8 @@ The September 8 foundation promotion review found zero backend production vulner
 The [September 3 audit](security/dependency-audit-2026-09-03.md) is historical: its Express 4 findings predate the completed migration. Refresh audits for every new release; this status is not a claim that earlier audit results remain current indefinitely.
 
 September 9 staging review refresh: Node 20.20.2 backend/mobile checks passed again (47/11 tests and builds). Backend production audit remains zero; mobile production/full audits remain 13 moderate, zero high/critical. Review clarified precipitation-interval wording and updated stale promotion status; the experimental algorithm and dependencies are unchanged.
+
+September 10 hourly adapter/runner checks on Node 20.20.2: backend lint/strict types, 63 network-free tests and build passed; mobile lint/strict types, 11 tests and Android/iOS/web export passed with staging API configuration and dotenv disabled. Audit refresh: backend production remains zero; mobile production/full audits remain 13 moderate, zero high/critical, in the same advisory chains above. No dependency or lockfile changes, incompatible downgrade or forced audit fixes were made. These current results preserve the earlier dated checks as historical evidence.
 
 ## Provider decision and launch requirements
 

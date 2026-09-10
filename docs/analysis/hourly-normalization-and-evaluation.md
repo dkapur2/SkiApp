@@ -1,0 +1,51 @@
+# Internal hourly normalization and evaluation v0.1.0
+
+This branch starts at verified staging `fb9d8fc231ddbbfae37ab9c65a7ce35892789735`. [Release evidence in PR #11](https://github.com/dkapur2/SkiApp/pull/11) records the completed foundation promotion and experimental staging acceptance. Main remains the documentation-only foundation successor `7538a6af8c6a389542e07829a3b8e2f88a6b5d68`. This work is an unmerged staging PR: no deployment, API/client integration, model-rule change, cache, score or operations inference.
+
+`backend/src/services/openMeteoHourly.ts` provides a separate typed request/capture boundary and pure raw-JSON normalizer. `backend/src/analysis/evaluateFreezeThaw.ts` evaluates normalized input with the unchanged `freeze-thaw/0.1.0` model. The CLI in `backend/src/cli/evaluateFreezeThaw.ts` runs only when explicitly invoked; imports, application startup, tests and CI never trigger a provider request.
+
+## Provider contract
+
+Official [Forecast API documentation](https://open-meteo.com/en/docs) checked September 10, 2026: temperature is an instantaneous model estimate; `rain` and `showers` describe separate liquid components over the preceding hour. UTC Unix timestamps are seconds. Explicit `elevation` controls provider downscaling; returned coordinates describe the selected grid cell. Past forecast hours are model estimates, not trail observations. The endpoint supports explicit `start_hour`/`end_hour`, Celsius and millimetres. `generationtime_ms` is processing duration, not initialization time.
+
+The new path requests exactly `temperature_2m,rain,showers`, Celsius/mm, GMT and Unix time at one explicit elevation. It does not reuse the current API's 12-hour slice, local-time indexing, lapse correction, total-precipitation phase split or shared base/mid/peak precipitation. Those existing behaviors and public response shapes remain unchanged.
+
+## Normalization and abstention
+
+- Versioned capture schema: `open-meteo-hourly-snapshot/0.1.0`; adapter: `open-meteo-hourly/0.1.0`; report: `freeze-thaw-evaluation/0.1.0`.
+- The snapshot carries `request` (latitude, longitude, elevationM, requestedAtMs), `asOfMs`, nullable `fetchedAtMs`/`modelRunAtMs`, and the unmodified provider `response`. Every capture/evaluation timestamp is UTC epoch **milliseconds**; only raw `hourly.time` uses **seconds**. Evaluation always uses the explicitly recorded `asOfMs`.
+- For request hour R, the request covers R−49h through R+25h. Normalization selects the model's exact T−48h through T+24h, T=floor(asOfMs/hour). The one-hour margins accommodate a bounded request crossing an hour boundary. Returned length is never assumed. The model requires 73 temperature endpoints and 72 liquid intervals; gaps or missing endpoints suppress all signals.
+- Raw time arrays must contain unique numeric UTC hour endpoints, with explicit UTC/GMT metadata and zero offset. Aligned arrays may arrive out of order and are sorted without mutating the capture. Duplicate/malformed times, missing arrays, unequal lengths and incompatible unit declarations are rejected. Overfetch values outside the selected window are ignored; their timestamps must still be valid and unique. Responses are capped at 1 MiB and 1,000 time entries.
+- No unit guessing or string-to-number coercion occurs at the provider boundary. Required temperature must be a finite number or null. Liquid amount at t is `rain[t] + showers[t]` over (t−1h,t], only when **both** components are finite, non-negative and known. Either null stays null, including zero + null. No total-precipitation fallback, snowfall subtraction, interpolation or rounding is used. The first endpoint's liquid interval lies outside the model window and is discarded. Zero stays zero. This preserves the model's conservative exclusion of rain ending exactly at cold onset.
+- Target elevation is explicit and limited to −500…9,000 metres for this experimental request interface; response elevation must match exactly. Both temperature and liquid components retain that response elevation. Missing elevation or a mismatch rejects the capture instead of falling back or applying another lapse adjustment. Returned grid coordinates are retained, not forced equal to requested coordinates. This is request/metadata consistency, **not validation that precipitation phase resolves each mountain elevation physically**; shared/coarse model precipitation and inversions remain important evaluation limitations.
+- Request ≤ successful fetch ≤ evaluation; a supplied model-run instant must be valid and no later than fetch. Missing fetch time stays null and the model abstains. Fetch age over 30 minutes also causes abstention; exactly 30 minutes remains allowed. Missing model-run time stays null. A live capture timestamps only successful complete JSON retrieval and supplies no model initialization instant. Replay may carry a reliably sourced initialization instant in the envelope; its origin must be retained with the evaluation evidence. Envelope timestamps are caller assertions, not authenticated provider metadata. Never backdate a fetch or infer initialization from generation duration/valid time.
+- Structural failures return a normalization reason and no analysis. Valid structure with incomplete/stale model input returns the model's `insufficient_data`, reasons and no signals. A complete result with no detected pattern is not a declaration about safety, ice, snow cover, trail availability or operations.
+
+## Explicit runner usage
+
+Run from `backend/` on Node 20 after `npm ci` and `npm run build`:
+
+```sh
+# Offline: raw snapshot envelope or a previous runner report; no network and no machine-clock refresh.
+node dist/cli/evaluateFreezeThaw.js --input /absolute/path/to/snapshot.json
+
+# Opt-in non-commercial evaluation only: one request, one coordinate/elevation.
+node dist/cli/evaluateFreezeThaw.js --live --latitude 43.6045 --longitude -72.8201 --elevation-m 1000 > /tmp/ski-hourly-report.json
+
+# Reproduce that report using its original evaluation clock and captured response.
+node dist/cli/evaluateFreezeThaw.js --input /tmp/ski-hourly-report.json
+```
+
+There is no default live mode. The runner supports no custom provider URL, endpoint/key configuration or credential lookup. Live mode uses the existing free `api.open-meteo.com/v1/forecast` endpoint with a 15-second timeout, response-size bound, no retries and no redirects. HTTP/transport/JSON failures produce an unavailable reason without echoing provider error bodies or generating synthetic weather. A completed JSON error/invalid response is rejected by normalization. Files/reports must fit the 1 MiB replay limit. Writes happen only through stdout redirection selected by the operator; nothing is persisted automatically.
+
+Exit codes: **0** analyzed (possibly no pattern); **2** insufficient data/rejected normalization; **1** usage, file/read/JSON or fetch failure. `--help` exits 0 without fetching. Reports include the snapshot, normalized input or rejection, model result, linked attribution/licence and a modification disclosure. They are internal evaluation artifacts, not user-facing forecasts or condition ratings. Historical replay retains the capture's evaluation time; comparing a saved capture at a later evaluation time requires explicitly changing `asOfMs`, and can correctly yield stale/missing data. It must not be described as a forecast available at an earlier time.
+
+## Coverage and validation limits
+
+Network-free provider-shaped fixtures are synthetic and labelled accordingly. Tests cover UTC/DST/midnight and fetch-hour crossings; window trimming/gaps; aligned/reordered/duplicate arrays; wrong units/local offsets; elevation consistency including zero; nulls versus zeros; combined rain/showers and interval evidence; thaw/refreeze, rain/freezing and sustained cold; fetch/model-run ordering and staleness; HTTP/transport/timeout/invalid JSON/oversize failures; CLI opt-in and exact offline replay. Existing model/API/frontend regressions remain part of `npm run check`.
+
+These checks establish normalization behavior, not forecast skill or surface-risk accuracy. The [model validation plan](experimental-freeze-thaw.md#practical-validation-plan-and-next-integration) still requires independently recorded conditions, multiple resorts/elevations/cycles, blinded comparisons, held-out events and predefined acceptance criteria. Capture snapshots at actual decision times, retain request/grid/elevation/provenance and version, and compare the temperature-only and liquid-transition evidence separately. Do not infer success from plausible JSON or from summer weather producing no patterns. There is no automatic bulk collection or evaluation against invented ground truth.
+
+One explicit live CLI compatibility check completed at **2026-09-10T19:36:42.834Z**, request `43.6045,-72.8201`, target 1000 m. The free endpoint returned 75 hourly endpoints with Unix/°C/mm declarations and elevation 1000 m (grid center `43.601864,-72.83549`). Normalization selected exactly 73 endpoints from September 8 19:00Z through September 11 19:00Z around September 10 19:00Z. Model-run provenance remained null. The result was analyzed with no configured pattern; that is not evidence of safe or skiable conditions. Offline replay of the saved report was byte-for-byte identical. This was a single manual contract check, separate from network-free tests, not a physical validation dataset. No live response was added to regression fixtures.
+
+The free endpoint remains authorized solely for non-commercial evaluation/prototyping under its [terms](https://open-meteo.com/en/terms). Aggregate usage across this runner and existing application calls must stay within the provider's limits; this CLI is not a shared rate limiter. Keep [Open-Meteo attribution and CC BY 4.0 requirements](https://open-meteo.com/en/licence) with exported/shared results. Commercial entitlement, owner-approved usage budget and separately authorized server-side customer endpoint/key setup remain launch requirements. No purchase, credential change, provider switch or production deployment is included.
