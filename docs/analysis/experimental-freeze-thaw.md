@@ -1,6 +1,6 @@
 # Experimental freeze–thaw analysis v0.1.0
 
-`backend/src/analysis/freezeThaw.ts` exports `analyzeFreezeThaw` and explicit input/result types. Version: `freeze-thaw/0.1.0`. This is a deterministic weather-pattern experiment, not a validated snowpack model, trail report, recommendation or condition score. It is not imported by any route, provider or client. No request, API response, cache or UI changes are included.
+`backend/src/analysis/freezeThaw.ts` exports `analyzeFreezeThaw` and explicit input/result types. Version: `freeze-thaw/0.1.0`. This is a deterministic weather-pattern experiment, not a validated snowpack model, trail report, recommendation or condition score. The [internal hourly adapter and opt-in evaluation runner](hourly-normalization-and-evaluation.md) now consume this contract; no route, client or application startup invokes the analysis. Public API responses, cache and UI behavior are unchanged.
 
 ## Provider inputs and availability
 
@@ -24,7 +24,7 @@ The initial contract needs 48 hours of lookback and 24 hours forward. These hori
 
 A bounded read of the **existing** free `/v1/forecast` endpoint at `43.6045,-72.8201`, elevation 1000 m, completed at `2026-09-08T20:34:52Z`. `past_hours=49&forecast_hours=25`, the three hourly variables above, Celsius/mm, GMT and Unix time returned 74 hourly endpoints, September 6 19:00Z through September 9 20:00Z. All three arrays had 74 non-null values, hourly spacing was 3600 seconds, and response elevation was 1000 m. No model-run metadata was supplied. This single sample establishes availability there at that time; it does not establish geographic completeness, forecast accuracy, snow cover or usable ski conditions. The live response is not a test fixture and tests never request provider data.
 
-Future normalization can deliberately overfetch with those hour counts, then select the exact required window and check every timestamp, unit and value. Do not assume returned array length or timezone offset, or replace missing components with zero. This PR adds no fetching/normalization implementation.
+That September 8 availability probe remains historical evidence. The [new internal adapter](hourly-normalization-and-evaluation.md) uses explicit UTC start/end hours with a one-hour margin, selects the exact required window, and checks timestamps, units, elevation and provenance. It never assumes returned array length or replaces missing components with zero. Live capture is opt-in and does not change the existing API provider path.
 
 ## Existing adapter assessment
 
@@ -62,7 +62,7 @@ The 30-minute fetch limit is an experimental input policy, not proof of model re
 
 ## Practical validation plan and next integration
 
-1. In a separate PR, add a server-only normalization path behind the existing provider service for the explicit history/horizon and target elevation, preserving public API shapes. Verify units, rain/showers null handling, timestamps, response elevation, freshness and provider failures with network-free adapter fixtures. Do not label existing derived client rain as provider rain. Keep outputs internal/opt-in; request-budget review precedes any additional background fetching.
+1. The [internal adapter/runner PR](hourly-normalization-and-evaluation.md) implements the normalization and network-free boundary checks. Next, review real opt-in captures for geographic/elevation completeness and pair them with independently recorded conditions. Do not label existing derived client rain as provider rain. Keep outputs internal; request-budget review precedes any background fetching or integration.
 2. Collect a consented, time-stamped evaluation set across at least three eastern resorts, multiple elevations/aspects, and several warm/cold cycles. Record independent thermometer readings and actual surface observations at morning/midday/afternoon with location/elevation, method and observer. Record grooming/snowmaking and operations only when a resort/observer actually supplies them, separately from model inputs. Obtain permission for any third-party report data.
 3. Pair each record with the forecast snapshot actually available before the decision time, its fetch/run provenance, requested elevation and version. Evaluate lookback-model error separately from future-event error. Avoid hindsight leakage from later model revisions; archives/reanalysis are comparison estimates, not ground truth. Start with manually retained evaluation artifacts, not a persistent production cache.
 4. Predefine the observation rubric with observers (wet/soft snow, crust/firm refrozen surface, uncertain/mixed), retain disagreements and unknowns, and blind observers to model output where practical. Compare transition detection precision/recall, timing error and abstention rate by elevation, horizon, rain versus thaw, and data completeness. Track false reassurance explicitly even though the module never declares safe conditions.
