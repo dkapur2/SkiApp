@@ -3,6 +3,8 @@ import { EVALUATION_VERSION, evaluateHourlySnapshot } from '../analysis/evaluate
 import { fetchOpenMeteoHourly, MAX_SNAPSHOT_BYTES } from '../services/openMeteoHourly';
 
 const USAGE = 'Usage: evaluateFreezeThaw --input snapshot-or-report.json | --live --latitude NUMBER --longitude NUMBER --elevation-m NUMBER';
+// Reports add normalized input, evidence and formatting to a bounded provider capture.
+export const MAX_REPLAY_BYTES = 4 * MAX_SNAPSHOT_BYTES;
 
 /** Importing this file never starts the runner. Exit 0 analyzed, 2 abstained, 1 usage/read/fetch failure. */
 export async function runEvaluationCli(
@@ -17,20 +19,20 @@ export async function runEvaluationCli(
       try {
         // Bound reads even if a file grows after stat; directories and oversized files are rejected.
         const stat = await file.stat();
-        if (!stat.isFile() || stat.size > MAX_SNAPSHOT_BYTES) throw new Error('Invalid file');
-        const bytes = Buffer.alloc(MAX_SNAPSHOT_BYTES + 1);
+        if (!stat.isFile() || stat.size > MAX_REPLAY_BYTES) throw new Error('Invalid file');
+        const bytes = Buffer.alloc(MAX_REPLAY_BYTES + 1);
         let length = 0;
         while (length < bytes.length) {
           const { bytesRead } = await file.read(bytes, length, bytes.length - length, length);
           if (bytesRead === 0) break;
           length += bytesRead;
         }
-        if (length > MAX_SNAPSHOT_BYTES) throw new Error('Oversized file');
+        if (length > MAX_REPLAY_BYTES) throw new Error('Oversized file');
         const value: unknown = JSON.parse(bytes.subarray(0, length).toString('utf8'));
         snapshot = typeof value === 'object' && value !== null && 'evaluationVersion' in value &&
           value.evaluationVersion === EVALUATION_VERSION && 'snapshot' in value ? value.snapshot : value;
       } finally { await file.close(); }
-    } catch { write('Cannot read a valid snapshot/report JSON file within the 1 MiB limit.'); return 1; }
+    } catch { write('Cannot read a valid snapshot/report JSON file within the 4 MiB replay limit.'); return 1; }
   } else if (args.length === 7 && args[0] === '--live') {
     const options = new Map<string, number>();
     for (let i = 1; i < args.length; i += 2) {
@@ -45,7 +47,12 @@ export async function runEvaluationCli(
     snapshot = capture.snapshot;
   } else { write(USAGE); return 1; }
   const report = evaluateHourlySnapshot(snapshot);
-  write(JSON.stringify(report, null, 2));
+  const serialized = JSON.stringify(report, null, 2);
+  if (Buffer.byteLength(serialized, 'utf8') + 1 > MAX_REPLAY_BYTES) {
+    write(JSON.stringify({ status: 'unavailable', reason: 'Evaluation report exceeds the 4 MiB replay limit; no unreplayable report was emitted.' }));
+    return 1;
+  }
+  write(serialized);
   return report.status === 'analyzed' ? 0 : 2;
 }
 
