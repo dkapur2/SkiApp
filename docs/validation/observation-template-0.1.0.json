@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "freeze-thaw-observation/0.1.0",
+  "recordStatus": "draft",
+  "observationId": null,
+  "eventId": null,
+  "observerCode": null,
+  "time": {"startUtc": null, "endUtc": null, "recordedAtUtc": null, "originalClockAndTimezone": null, "uncertaintyMinutes": null},
+  "site": {"siteId": null, "resortId": null, "latitude": null, "longitude": null, "horizontalUncertaintyM": null, "elevationM": null, "elevationSource": null, "aspectDegrees": null, "shadeExposure": null, "snowCover": "unknown"},
+  "permission": {"confirmed": false, "organization": null, "reference": null, "permittedUse": null, "sharingRestrictions": null, "retentionReviewDate": null},
+  "method": {"kind": "unrecorded", "sourceReference": null, "description": null, "blindedToSignals": null, "calibrationReference": null, "uncertainty": "unknown", "uncertaintyNotes": null},
+  "surface": {"wetness": "unknown", "texture": ["unknown"], "freeWaterObserved": null, "transition": "not_assessed", "onsetEarliestUtc": null, "onsetLatestUtc": null, "notes": null},
+  "independentWeather": {"sourceReference": null, "methodAndUncertainty": null, "airTemperatureC": null, "surfaceTemperatureC": null, "liquidPrecipitationMm": null, "accumulationStartUtc": null, "accumulationEndUtc": null, "precipitationPhase": "unknown"},
+  "reportedOperations": [],
+  "evidenceReferences": [],
+  "correctionOf": null
+}
