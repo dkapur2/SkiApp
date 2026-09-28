@@ -1,0 +1,675 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:skitheeast:freeze-thaw-observation:0.1.0",
+  "title": "Independent observation record \u2014 0.1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordStatus",
+    "observationId",
+    "eventId",
+    "observerCode",
+    "time",
+    "site",
+    "permission",
+    "method",
+    "surface",
+    "independentWeather",
+    "reportedOperations",
+    "evidenceReferences",
+    "correctionOf"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "freeze-thaw-observation/0.1.0"
+    },
+    "recordStatus": {
+      "enum": [
+        "draft",
+        "complete"
+      ]
+    },
+    "observationId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "eventId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "observerCode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "time": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "startUtc",
+        "endUtc",
+        "recordedAtUtc",
+        "originalClockAndTimezone",
+        "uncertaintyMinutes"
+      ],
+      "properties": {
+        "startUtc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "endUtc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "recordedAtUtc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "originalClockAndTimezone": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "uncertaintyMinutes": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "site": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "siteId",
+        "resortId",
+        "latitude",
+        "longitude",
+        "horizontalUncertaintyM",
+        "elevationM",
+        "elevationSource",
+        "aspectDegrees",
+        "shadeExposure",
+        "snowCover"
+      ],
+      "properties": {
+        "siteId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "resortId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "latitude": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitude": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -180,
+          "maximum": 180
+        },
+        "horizontalUncertaintyM": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "elevationM": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -500,
+          "maximum": 9000
+        },
+        "elevationSource": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "aspectDegrees": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 360
+        },
+        "shadeExposure": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "snowCover": {
+          "enum": [
+            "present",
+            "patchy",
+            "absent",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "permission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "confirmed",
+        "organization",
+        "reference",
+        "permittedUse",
+        "sharingRestrictions",
+        "retentionReviewDate"
+      ],
+      "properties": {
+        "confirmed": {
+          "type": "boolean"
+        },
+        "organization": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "permittedUse": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "sharingRestrictions": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "retentionReviewDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        }
+      }
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "sourceReference",
+        "description",
+        "blindedToSignals",
+        "calibrationReference",
+        "uncertainty",
+        "uncertaintyNotes"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "unrecorded",
+            "partner_field_log",
+            "direct_observation",
+            "instrument",
+            "permissioned_photo_review"
+          ]
+        },
+        "sourceReference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "blindedToSignals": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "calibrationReference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "uncertainty": {
+          "enum": [
+            "low",
+            "moderate",
+            "high",
+            "unknown"
+          ]
+        },
+        "uncertaintyNotes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
+    },
+    "surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wetness",
+        "texture",
+        "freeWaterObserved",
+        "transition",
+        "onsetEarliestUtc",
+        "onsetLatestUtc",
+        "notes"
+      ],
+      "properties": {
+        "wetness": {
+          "enum": [
+            "dry",
+            "damp",
+            "wet",
+            "unknown"
+          ]
+        },
+        "texture": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "soft",
+              "loose",
+              "crust",
+              "hard_ice",
+              "mixed",
+              "unknown"
+            ]
+          }
+        },
+        "freeWaterObserved": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "transition": {
+          "enum": [
+            "new_crust_or_ice",
+            "no_transition_observed",
+            "indeterminate",
+            "not_assessed"
+          ]
+        },
+        "onsetEarliestUtc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "onsetLatestUtc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
+    },
+    "independentWeather": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceReference",
+        "methodAndUncertainty",
+        "airTemperatureC",
+        "surfaceTemperatureC",
+        "liquidPrecipitationMm",
+        "accumulationStartUtc",
+        "accumulationEndUtc",
+        "precipitationPhase"
+      ],
+      "properties": {
+        "sourceReference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "methodAndUncertainty": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "airTemperatureC": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "surfaceTemperatureC": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "liquidPrecipitationMm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "accumulationStartUtc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "accumulationEndUtc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "precipitationPhase": {
+          "enum": [
+            "rain",
+            "snow",
+            "mixed",
+            "freezing_rain",
+            "none_observed",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "reportedOperations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "timeUtc",
+          "sourceReference",
+          "description",
+          "basis"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "grooming",
+              "snowmaking",
+              "traffic",
+              "operations"
+            ]
+          },
+          "timeUtc": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "sourceReference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "basis": {
+            "enum": [
+              "direct_observation",
+              "partner_report"
+            ]
+          }
+        }
+      }
+    },
+    "evidenceReferences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reference",
+          "sha256",
+          "permissionReference"
+        ],
+        "properties": {
+          "reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "permissionReference": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "correctionOf": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 2000
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "recordStatus": {
+            "const": "complete"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "observationId": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "observerCode": {
+            "type": "string"
+          },
+          "time": {
+            "properties": {
+              "startUtc": {
+                "type": "string"
+              },
+              "endUtc": {
+                "type": "string"
+              },
+              "recordedAtUtc": {
+                "type": "string"
+              },
+              "originalClockAndTimezone": {
+                "type": "string"
+              },
+              "uncertaintyMinutes": {
+                "type": "number"
+              }
+            }
+          },
+          "site": {
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "latitude": {
+                "type": "number"
+              },
+              "longitude": {
+                "type": "number"
+              },
+              "horizontalUncertaintyM": {
+                "type": "number"
+              },
+              "elevationM": {
+                "type": "number"
+              },
+              "elevationSource": {
+                "type": "string"
+              }
+            }
+          },
+          "permission": {
+            "properties": {
+              "confirmed": {
+                "const": true
+              },
+              "organization": {
+                "type": "string"
+              },
+              "reference": {
+                "type": "string"
+              },
+              "permittedUse": {
+                "type": "string"
+              },
+              "sharingRestrictions": {
+                "type": "string"
+              },
+              "retentionReviewDate": {
+                "type": "string"
+              }
+            }
+          },
+          "method": {
+            "properties": {
+              "kind": {
+                "not": {
+                  "const": "unrecorded"
+                }
+              },
+              "sourceReference": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "uncertaintyNotes": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "description": "Blank drafts allow nulls; complete records require provenance and permission. UTC/time ordering, method independence, evidence adequacy and rights require protocol review; JSON Schema cannot authenticate them."
+}

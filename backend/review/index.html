@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SkiTheEast · Freeze–thaw review</title><link rel="stylesheet" href="/style.css"><link rel="icon" href="/icon.svg" type="image/svg+xml"><script type="module" src="/review/src/main.js"></script></head>
+<body>
+<a class="skip" href="#workspace">Skip to review workspace</a>
+<header><a class="brand" href="/">SKITHEEAST <span>/ FIELD REVIEW</span></a><span class="local">● LOCAL ONLY</span></header>
+<main>
+  <section class="intro"><p class="eyebrow">INTERNAL RESEARCH · FREEZE–THAW / 0.1.0</p><h1>Read the evidence.<br><span>Keep the uncertainty.</span></h1><p>Explore saved weather-model signals and the data behind them.<br>No trail-condition rating. No automatic weather requests.</p></section>
+  <div class="workspace" id="workspace" tabindex="-1">
+    <aside aria-label="Report library">
+      <section class="card"><p class="eyebrow">01 / YOUR CAPTURES</p><h2>Load saved reports</h2><p>Files stay in this browser’s memory. Nothing is uploaded or saved automatically.</p><label for="origin">Origin label for imported files</label><select id="origin"><option value="unverified">Unverified origin</option><option value="provider">Provider capture — I confirm provenance</option><option value="synthetic">Synthetic inputs</option></select><label for="files">Choose evaluation JSON files</label><input id="files" type="file" accept=".json,application/json" multiple aria-describedby="limits"><p class="small" id="limits">4 MiB per file · 30 reports · 32 MiB per batch. Load runner reports, not the manifest. Reloading clears the library.</p><button id="clear" type="button" class="quiet">Clear reports</button><p id="count" class="small">0 reports in memory</p></section>
+      <section class="card"><p class="eyebrow">02 / SYNTHETIC EXAMPLES</p><h2>Explore the behavior</h2><p>Invented weather inputs demonstrate the rules and abstention. They are not real events.</p><div id="examples" class="example-buttons"></div></section>
+      <section class="card kit"><p class="eyebrow">03 / VALIDATION KIT</p><h2>Bring independent evidence</h2><p>A permissioned partner pilot starts with recorded observations and an agreed protocol.</p><a href="/validation-protocol.md" target="_blank" rel="noopener">Read the pilot protocol ↗</a><a href="/observation-template.json" download>Download blank observation template ↓</a><a href="/observation.schema.json" download>Download versioned schema ↓</a><p class="small">No observations have been collected or invented here.</p></section>
+    </aside>
+    <div class="review-column">
+      <div class="filters card"><div><label for="location">Resort / location</label><select id="location" disabled></select></div><div><label for="elevation">Elevation</label><select id="elevation" disabled></select></div><div class="window-filter"><label for="window">Evaluation window / report</label><select id="window" disabled></select></div></div>
+      <p id="message" role="status" aria-live="polite"></p><p id="errors" role="alert"></p>
+      <section id="empty" class="empty"><div class="empty-mark" aria-hidden="true">∿</div><p class="eyebrow">A REPORT IS THE STARTING POINT</p><h2>No reports loaded</h2><p>Choose a saved evaluation file, or select a clearly labeled synthetic example on the left.</p><p class="small">The September 16 captures were pipeline checks with no qualifying events. Import them explicitly from your retained snapshot folder.</p></section>
+      <div id="report" hidden></div>
+    </div>
+  </div>
+</main><footer>Experimental weather-derived signals. Surface conditions remain unknown. Free-endpoint use is for non-commercial evaluation; commercial entitlement remains a launch requirement.</footer>
+</body></html>

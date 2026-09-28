@@ -8,7 +8,7 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['src/**/*.ts', 'test/**/*.ts'],
+    files: ['src/**/*.ts', 'test/**/*.ts', 'review/**/*.ts'],
     rules: {
       // TypeScript reports undefined names more accurately than ESLint.
       'no-undef': 'off',

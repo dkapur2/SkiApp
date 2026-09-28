@@ -7,12 +7,14 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build && npm run build:review",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "lint": "eslint src test",
+    "lint": "eslint src test review",
     "test": "tsx --test test/*.test.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.review.json",
+    "build:review": "tsc -p tsconfig.review.json",
+    "review:viewer": "npm run build:review && tsx review/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
