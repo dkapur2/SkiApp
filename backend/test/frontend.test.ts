@@ -36,9 +36,14 @@ function fixture() {
 // Execute the shipped script with a small DOM sink. Assertions inspect HTML
 // produced by the real selection/render functions, never source keywords.
 async function page(payload: unknown) {
-  const nodes = new Map<string, {innerHTML: string; value: string; style: Record<string, string>; classList: {add(): void; remove(): void}; addEventListener(): void; querySelectorAll(): []}>();
+  type Handler = (event: unknown) => void;
+  const nodes = new Map<string, {innerHTML: string; value: string; style: Record<string, string>; classList: {add(): void; remove(): void}; events: Record<string, Handler>; addEventListener(type: string, handler: Handler): void; querySelectorAll(): []}>();
   const node = (id: string) => {
-    if (!nodes.has(id)) nodes.set(id, {innerHTML: '', value: '', style: {}, classList: {add() {}, remove() {}}, addEventListener() {}, querySelectorAll: () => []});
+    if (!nodes.has(id)) {
+      const events: Record<string, Handler> = {};
+      nodes.set(id, {innerHTML: '', value: '', style: {}, classList: {add() {}, remove() {}}, events,
+        addEventListener: (type, handler) => { events[type] = handler; }, querySelectorAll: () => []});
+    }
     return nodes.get(id)!;
   };
   const timers: (() => void)[] = [];
@@ -52,7 +57,14 @@ async function page(payload: unknown) {
     fetch: async (url: string) => {
       requests.push(url);
       if (url.endsWith('/resorts/conditions')) return {ok: true, json: async () => [{id: 'fixture', name: 'Fixture Mountain', state: 'VT', base_elevation_ft: 1000, mid_elevation_ft: 2000, peak_elevation_ft: 3000}]};
-      if (url.endsWith('/hiking/conditions')) return {ok: true, json: async () => [{id: 'old-rag', name: 'Old Rag', state: 'VA', base_elevation_ft: 3291, mid_elevation_ft: 3291, peak_elevation_ft: 3291}]};
+      if (url.endsWith('/hiking/conditions')) return {ok: true, json: async () => [{
+        id: 'old-rag', name: 'Old Rag', state: 'VA', base_elevation_ft: 933, mid_elevation_ft: 2101, peak_elevation_ft: 3272,
+        weather_points: {
+          base: {label: 'Ridge Trail start', latitude: 38.57162186, longitude: -78.29415182, elevation_ft: 933},
+          mid: {label: 'Ridge Trail near half the vertical ascent', latitude: 38.55877199, longitude: -78.30137686, elevation_ft: 2101},
+          peak: {label: 'NPS Old Rag Summit viewpoint', latitude: 38.55171256, longitude: -78.31460513, elevation_ft: 3272},
+        },
+      }]};
       assert.ok([
         'https://skiapp-staging.up.railway.app/resorts/fixture/conditions',
         'https://skiapp-staging.up.railway.app/hiking/old-rag/conditions',
@@ -69,6 +81,9 @@ async function page(payload: unknown) {
   await select();
   return {
     node, requests, select,
+    selectElevation: (elev: 'base' | 'mid' | 'peak') => {
+      node('elev-tabs').events.click({ target: { closest: () => ({ dataset: {elev}, classList: {add() {}} }) } });
+    },
     search: (value: string) => {
       node('resort-search').value = value;
       runInContext('renderDropdownItems(filteredResorts())', context);
@@ -88,29 +103,37 @@ describe('rendered web forecast', () => {
     assert.doesNotMatch(dropdown, /Virginia/);
     for (const query of ['OLD rag', 'hiking']) {
       const filtered = view.search(query);
-      assert.match(filtered, /Hiking[\s\S]*Old Rag[\s\S]*Summit 3,291 ft/);
+      assert.match(filtered, /Hiking[\s\S]*Old Rag[\s\S]*Summit 3,272 ft/);
       assert.doesNotMatch(filtered, /Fixture Mountain|Vermont/);
     }
     assert.match(view.search('no-such-place'), /No destinations found/);
   });
 
-  it('loads hiking summit forecasts, preserves unavailable/zero values and returns to the ski controls', async () => {
+  it('loads three hiking elevations, preserves unavailable/zero values and returns to the ski controls', async () => {
     const view = await page(fixture());
     await view.select('old-rag', 'Old Rag');
     const rendered = view.node('content').innerHTML;
     assert.ok(view.requests.some(url => url.endsWith('/hiking/old-rag/conditions')));
     assert.match(rendered, /<h2>Old Rag<\/h2>/);
     assert.match(rendered, /Hiking · Virginia/);
-    assert.match(rendered, /Summit 3,291 ft/);
-    assert.match(rendered, /Summit weather forecast; trail conditions are not reported/);
+    assert.match(rendered, /Base ≈ 933 ft/);
+    assert.match(rendered, /Mid ≈ 2,101 ft/);
+    assert.match(rendered, /Summit ≈ 3,272 ft/);
+    assert.match(rendered, /38.558772, -78.301377/);
+    assert.match(rendered, /halfway in elevation gained/);
+    assert.match(rendered, /Weather forecasts at three trail locations; trail conditions are not reported/);
     assert.match(rendered, /Weather data by Open-Meteo.com/);
     assert.match(rendered, /Provider model run: Not provided/);
-    assert.doesNotMatch(rendered, /Ask AI Advisor|Resort operations|data-elev="base"|data-elev="mid"/);
+    assert.doesNotMatch(rendered, /Ask AI Advisor|Resort operations/);
+    assert.match(rendered, /data-elev="base"/);
+    assert.match(rendered, /data-elev="mid"/);
+    assert.match(rendered, /data-elev="peak">Summit/);
     const hourly = view.node('hourly-scroll').innerHTML;
     assert.match(hourly, /Summit/);
     assert.match(hourly, /Snow — · Rain —/);
     assert.match(hourly, /Snow 0" · Rain 0"/);
-    assert.doesNotMatch(hourly, /h-base|h-mid/);
+    assert.match(hourly, /h-base/);
+    assert.match(hourly, /h-mid/);
     view.advance(26);
     assert.match(view.node('sources-freshness').innerHTML, /Stale — fetched more than 30 minutes ago/);
     assert.doesNotMatch(view.node('sources-freshness').innerHTML, /Resort operations/);
@@ -119,6 +142,19 @@ describe('rendered web forecast', () => {
     assert.match(view.node('content').innerHTML, /Ask AI Advisor/);
     assert.match(view.node('content').innerHTML, /data-elev="base"/);
     assert.match(view.node('hourly-scroll').innerHTML, /h-base/);
+  });
+
+  it('switches the daily forecast between the actual base, midpoint and summit values', async () => {
+    const data = fixture();
+    const day = data.forecast[0];
+    const view = await page({...data, forecast: [{...day,
+      base: {...day.base, high_f: 45}, mid: {...day.mid, high_f: 35}, peak: {...day.peak, high_f: 25},
+    }, ...data.forecast.slice(1)]});
+    await view.select('old-rag', 'Old Rag');
+    for (const [zone, temperature] of [['base', 45], ['mid', 35], ['peak', 25]] as const) {
+      view.selectElevation(zone);
+      assert.match(view.node('forecast-grid').innerHTML, new RegExp(`temp-hi [^"]*">${temperature}°`));
+    }
   });
 
   it('shows a failed hiking forecast as an error without stale weather content', async () => {

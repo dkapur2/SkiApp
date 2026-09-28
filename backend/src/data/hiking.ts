@@ -1,20 +1,36 @@
-import type { Resort } from '../types';
+import type { HikingDestination } from '../types';
 
 // Separate from the ski catalog used by mobile and startup warming.
-// NPS lists Old Rag's summit at 3,291 ft; see docs/old-rag-hiking.md.
-// All three internal elevation slots refer to the same summit weather point.
-// The hiking client displays only the summit, not invented trail elevations.
-const summitMetres = 3291 / 3.28084;
+// NPS Ridge Trail / Old Rag Summit points, with USGS 1 m DEM elevations.
+// Mid is within 1 m vertically of half the trailhead-to-viewpoint rise.
+// These are approximate weather points, not surveyed navigation waypoints.
+// Source IDs, terrain samples and the distinction from peak height are documented
+// in docs/old-rag-hiking.md. Provider requests use each point independently.
+const weatherPoints: HikingDestination['weather_points'] = {
+  base: {
+    label: 'Ridge Trail start by the main parking area',
+    latitude: 38.57162186, longitude: -78.29415182, elevation: 284.5,
+  },
+  mid: {
+    label: 'Ridge Trail near half the vertical ascent',
+    latitude: 38.55877199, longitude: -78.30137686, elevation: 640.3,
+  },
+  peak: {
+    label: 'NPS Old Rag Summit viewpoint',
+    latitude: 38.55171256, longitude: -78.31460513, elevation: 997.2,
+  },
+};
 
-export const HIKING_DESTINATIONS: Resort[] = [{
+export const HIKING_DESTINATIONS: HikingDestination[] = [{
   id: 'old-rag',
   name: 'Old Rag',
   state: 'VA',
-  latitude: 38.5518,
-  longitude: -78.3142,
-  base_elevation: summitMetres,
-  mid_elevation: summitMetres,
-  peak_elevation: summitMetres,
+  latitude: weatherPoints.peak.latitude,
+  longitude: weatherPoints.peak.longitude,
+  base_elevation: weatherPoints.base.elevation,
+  mid_elevation: weatherPoints.mid.elevation,
+  peak_elevation: weatherPoints.peak.elevation,
+  weather_points: weatherPoints,
 }];
 
 export const HIKING_BY_ID = new Map(HIKING_DESTINATIONS.map(destination => [destination.id, destination]));

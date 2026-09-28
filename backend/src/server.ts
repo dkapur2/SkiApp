@@ -4,7 +4,7 @@ import path from 'path';
 
 import { RESORTS_BY_ID } from './data/resorts';
 import { HIKING_BY_ID, HIKING_DESTINATIONS } from './data/hiking';
-import { fetchResortConditions, getAllResortMetadata, getResortMetadata, warmCache } from './services/openMeteo';
+import { fetchHikingConditions, fetchResortConditions, getAllResortMetadata, getResortMetadata, warmCache } from './services/openMeteo';
 import { fetchSkiApiData } from './services/skiApi';
 import { getRecommendation } from './services/ai';
 import type { RecommendRequest } from './types';
@@ -67,10 +67,18 @@ app.get('/resorts/:resortId/conditions', async (req, res) => {
 
 /** Web hiking destinations are separate from the existing ski resort catalog. */
 app.get('/hiking/conditions', (_req, res) => {
-  res.json(HIKING_DESTINATIONS.map(getResortMetadata));
+  res.json(HIKING_DESTINATIONS.map(destination => ({
+    ...getResortMetadata(destination),
+    weather_points: Object.fromEntries(Object.entries(destination.weather_points).map(([zone, point]) => [zone, {
+      label: point.label,
+      latitude: point.latitude,
+      longitude: point.longitude,
+      elevation_ft: Math.round(point.elevation * 3.28084),
+    }])),
+  })));
 });
 
-/** Summit weather only: no ski operations provider or recommendations. */
+/** Weather at mapped trail points: no ski operations provider or recommendations. */
 app.get('/hiking/:destinationId/conditions', async (req, res) => {
   const destination = HIKING_BY_ID.get(req.params.destinationId);
   if (!destination) {
@@ -78,7 +86,7 @@ app.get('/hiking/:destinationId/conditions', async (req, res) => {
     return;
   }
   try {
-    const conditions = await fetchResortConditions(destination);
+    const conditions = await fetchHikingConditions(destination);
     res.json({ ...conditions, ski_conditions: null });
   } catch (e) {
     console.error(`[hiking conditions] ${destination.id}:`, e);

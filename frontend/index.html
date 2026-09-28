@@ -727,11 +727,11 @@
           </div>`}
         </div>
         <div class="elev-pills">
-          ${hiking ? `<span class="elev-pill peak">Summit ${meta.peak_elevation_ft.toLocaleString()} ft</span>` : `
-          <span class="elev-pill base">Base ${meta.base_elevation_ft.toLocaleString()} ft</span>
-          <span class="elev-pill mid">Mid ${meta.mid_elevation_ft.toLocaleString()} ft</span>
-          <span class="elev-pill peak">Peak ${meta.peak_elevation_ft.toLocaleString()} ft</span>`}
+          <span class="elev-pill base">Base ${hiking ? '≈ ' : ''}${meta.base_elevation_ft.toLocaleString()} ft</span>
+          <span class="elev-pill mid">Mid ${hiking ? '≈ ' : ''}${meta.mid_elevation_ft.toLocaleString()} ft</span>
+          <span class="elev-pill peak">${hiking ? 'Summit ≈' : 'Peak'} ${meta.peak_elevation_ft.toLocaleString()} ft</span>
         </div>
+        ${hiking ? renderTrailPoints(meta) : ''}
         <div class="ai-panel" id="ai-panel"></div>
         <section class="sources-freshness" id="sources-freshness" aria-label="Sources and freshness">
           ${renderFreshness(data, hiking)}
@@ -747,10 +747,9 @@
         <div class="forecast-controls">
           <div class="section-title" style="margin:0">16-Day Forecast</div>
           <div class="elev-tabs" id="elev-tabs">
-            ${hiking ? '<span class="elev-tab peak active">Summit</span>' : `
             <button class="elev-tab base ${activeElevTab==='base'?'active':''}" data-elev="base">Base</button>
             <button class="elev-tab mid  ${activeElevTab==='mid' ?'active':''}" data-elev="mid">Mid</button>
-            <button class="elev-tab peak ${activeElevTab==='peak'?'active':''}" data-elev="peak">Peak</button>`}
+            <button class="elev-tab peak ${activeElevTab==='peak'?'active':''}" data-elev="peak">${hiking ? 'Summit' : 'Peak'}</button>
           </div>
         </div>
         <div class="forecast-scroll-wrap">
@@ -770,6 +769,21 @@
       btn.classList.add('active');
       renderForecast(currentConditions.forecast);
     });
+  }
+
+  function renderTrailPoints(meta) {
+    const points = meta.weather_points;
+    if (!points) return '<p>Trail forecast locations unavailable.</p>';
+    return `<details class="sources-freshness">
+      <summary>Trail forecast locations</summary>
+      <p>Ridge Trail ascent. Elevations are above sea level; Mid is halfway in elevation gained from Base to Summit, not halfway in trail distance.</p>
+      ${['base', 'mid', 'peak'].map(zone => {
+        const point = points[zone];
+        const label = zone === 'peak' ? 'Summit' : zone === 'base' ? 'Base' : 'Mid';
+        return `<p><strong>${label}</strong> — ${escapeHtml(point.label)} · approximately ${point.elevation_ft.toLocaleString()} ft · ${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)}</p>`;
+      }).join('')}
+      <p>Locations follow NPS trail/summit data with USGS terrain elevations. Weather models cover a wider area; these are not on-site measurements or navigation directions.</p>
+    </details>`;
   }
 
   // ── AI Recommendation ─────────────────────────────────────────────────────
@@ -839,8 +853,9 @@
             <span class="badge-cloud">☁ ${h.cloud_cover_pct ?? '—'}%</span>
             <span class="badge-freeze">🧊 ${freeze}</span>
           </div>
-          ${hiking ? elevSection('peak', h.peak, 'Summit') :
-            elevSection('base', h.base) + elevSection('mid', h.mid) + elevSection('peak', h.peak)}
+          ${elevSection('base', h.base)}
+          ${elevSection('mid', h.mid)}
+          ${elevSection('peak', h.peak, hiking ? 'Summit' : 'Peak')}
         </div>`;
     }).join('');
   }
@@ -957,15 +972,15 @@
     const weather = data.weather_metadata;
     const source = weather?.source;
     const attribution = source === 'open-meteo'
-      ? '<a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Weather data by Open-Meteo.com</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a><p>Elevation adjustments and unit conversions by SkiTheEast.</p>'
+      ? `<a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Weather data by Open-Meteo.com</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a><p>${hiking ? 'Elevation downscaling by Open-Meteo; unit conversions by SkiTheEast.' : 'Elevation adjustments and unit conversions by SkiTheEast.'}</p>`
       : '';
     const operations = data.ski_conditions;
     return `<h3>Sources &amp; freshness</h3>
       <p>Weather source: ${source === 'open-meteo' ? 'Open-Meteo' : source ? escapeHtml(source) : 'Unavailable'}</p>
       ${attribution}
-      <p>Weather server fetch: ${timestampLabel(weather?.fetched_at)} · ${fetchFreshness(weather?.fetched_at)}</p>
+      <p>Weather server fetch: ${timestampLabel(weather?.fetched_at)} · ${fetchFreshness(weather?.fetched_at)}${hiking ? ' · Oldest of the three location fetches' : ''}</p>
       <p>Provider model run: ${timestampLabel(weather?.model_run_at, 'Not provided')}</p>
-      ${hiking ? '<p>Summit weather forecast; trail conditions are not reported. <a href="https://www.nps.gov/places/old-rag.htm" target="_blank" rel="noopener noreferrer">NPS hiking information</a></p>' :
+      ${hiking ? '<p>Weather forecasts at three trail locations; trail conditions are not reported. Cloud and freezing-level summaries refer to the summit. <a href="https://www.nps.gov/places/old-rag.htm" target="_blank" rel="noopener noreferrer">NPS hiking information</a></p>' :
         `<p>Resort operations${operations?.source ? ` (${escapeHtml(operations.source)})` : ''}: ${operations ? `server fetch ${timestampLabel(operations.fetched_at)} · ${fetchFreshness(operations.fetched_at)}` : 'Unavailable'}</p>`}
       <p>Weather values are forecasts, not observations. — means unavailable; 0 is ${hiking ? 'a forecast zero' : 'a measured zero'}. Fetch time is when the server retrieved data, not when the model ran.</p>`;
   }

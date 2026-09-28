@@ -8,6 +8,8 @@ import type {
   DailyForecast,
   DailyElevationData,
   ResortMetadata,
+  HikingDestination,
+  TrailWeatherPoint,
 } from '../types';
 import { RESORTS } from '../data/resorts';
 import { feetToInches, feetToMiles, roundFeet } from './openMeteoUnits';
@@ -96,6 +98,7 @@ async function fetchOpenMeteo(
   lon: number,
   dailyVars: string[],
   hourlyVars: string[],
+  elevation?: number,
 ): Promise<OpenMeteoResponse> {
   const params = new URLSearchParams({
     latitude: String(lat),
@@ -108,6 +111,8 @@ async function fetchOpenMeteo(
     forecast_days: String(FORECAST_DAYS),
     timezone: 'auto',
   });
+  // Hiking points use mapped terrain elevations for provider downscaling.
+  if (elevation !== undefined) params.set('elevation', String(elevation));
 
   let lastError: Error = new Error('No attempts made');
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -209,7 +214,7 @@ function hourlyElevationSnapshot(
 }
 
 /** Find the index of the current hour in the API's time array. */
-function currentHourIndex(data: OpenMeteoResponse): number {
+function currentHourIndex(data: OpenMeteoResponse, requireCurrentHour = false): number {
   const localNow = new Date(Date.now() + data.utc_offset_seconds * 1000);
   const year  = localNow.getUTCFullYear();
   const month = String(localNow.getUTCMonth() + 1).padStart(2, '0');
@@ -217,6 +222,7 @@ function currentHourIndex(data: OpenMeteoResponse): number {
   const hour  = String(localNow.getUTCHours()).padStart(2, '0');
   const target = `${year}-${month}-${day}T${hour}:00`;
   const idx = data.hourly.time.indexOf(target);
+  if (requireCurrentHour && idx < 0) throw new Error('Trail weather is missing the current hour');
   return idx >= 0 ? idx : 0;
 }
 
@@ -235,6 +241,85 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
   const baseData  = atElevation(raw, modelElev, resort.base_elevation);
   const midData   = atElevation(raw, modelElev, resort.mid_elevation);
   const peakData  = atElevation(raw, modelElev, resort.peak_elevation);
+
+  const result = buildConditions(resort, baseData, midData, peakData, providerFetchedAt);
+  conditionsCache.set(resort.id, result);
+  return result;
+}
+
+/** Three independent trail coordinates, each downscaled once by Open-Meteo. */
+export async function fetchHikingConditions(destination: HikingDestination): Promise<WeatherConditions> {
+  const cacheKey = `hiking:${destination.id}:${JSON.stringify(destination.weather_points)}`;
+  const cached = conditionsCache.get(cacheKey);
+  if (cached !== null) return cached;
+
+  const responses = await Promise.all((['base', 'mid', 'peak'] as const).map(async zone => {
+    const point = destination.weather_points[zone];
+    const data = await fetchOpenMeteo(point.latitude, point.longitude, ELEVATION_DAILY_VARS,
+      [...ELEVATION_HOURLY_VARS, ...PEAK_EXTRA_HOURLY_VARS], point.elevation);
+    const fetchedAt = Date.now();
+    validateTrailWeather(data, point);
+    return { data, fetchedAt };
+  }));
+  const [base, mid, peak] = responses.map(response => response.data);
+  for (const data of [base, mid]) {
+    if (data.utc_offset_seconds !== peak.utc_offset_seconds ||
+        JSON.stringify(data.hourly.time) !== JSON.stringify(peak.hourly.time) ||
+        JSON.stringify(data.daily.time) !== JSON.stringify(peak.daily.time)) {
+      throw new Error('Trail weather time windows do not match');
+    }
+  }
+  // Use the oldest completed fetch in the cohort, never freshen an older point.
+  const fetchedAt = new Date(Math.min(...responses.map(response => response.fetchedAt)));
+  const result = buildConditions(destination, base, mid, peak, fetchedAt, true);
+  // A partial or invalid cohort is never cached or substituted with another point.
+  conditionsCache.set(cacheKey, result);
+  return result;
+}
+
+function validateTrailWeather(data: OpenMeteoResponse, point: TrailWeatherPoint): void {
+  if (!Number.isFinite(data.elevation) || Math.abs(data.elevation - point.elevation) > 0.1) {
+    throw new Error('Trail weather elevation does not match the requested point');
+  }
+  const hourlyUnits: Record<string, string> = {
+    temperature_2m: '°F', apparent_temperature: '°F', windspeed_10m: 'mp/h',
+    windgusts_10m: 'mp/h', snowfall: 'inch', rain: 'inch', precipitation: 'inch',
+    snow_depth: 'ft', visibility: 'ft', cloudcover: '%', freezinglevel_height: 'ft',
+  };
+  const dailyUnits: Record<string, string> = {
+    temperature_2m_max: '°F', temperature_2m_min: '°F', apparent_temperature_max: '°F',
+    apparent_temperature_min: '°F', windspeed_10m_max: 'mp/h', windgusts_10m_max: 'mp/h',
+    snowfall_sum: 'inch', rain_sum: 'inch', precipitation_sum: 'inch',
+  };
+  for (const [section, expectedUnits] of [['hourly', hourlyUnits], ['daily', dailyUnits]] as const) {
+    const times = data[section]?.time;
+    if (!Array.isArray(times) || !times.length || new Set(times).size !== times.length ||
+        times.some((time, index) => typeof time !== 'string' || (index > 0 && time <= times[index - 1]))) {
+      throw new Error(`Invalid trail weather ${section} times`);
+    }
+    for (const [variable, unit] of Object.entries(expectedUnits)) {
+      const values: unknown = data[section][variable as keyof typeof data[typeof section]];
+      if (data[`${section}_units`]?.[variable] !== unit || !Array.isArray(values) ||
+          values.length !== times.length || values.some(value => value !== null &&
+            (typeof value !== 'number' || !Number.isFinite(value)))) {
+        throw new Error(`Invalid trail weather ${section} values or units: ${variable}`);
+      }
+    }
+  }
+  if (!Number.isInteger(data.utc_offset_seconds) || data.daily.time.length !== FORECAST_DAYS ||
+      data.hourly.time.length - currentHourIndex(data, true) < HOURLY_WINDOW) {
+    throw new Error('Trail weather has an incomplete forecast window');
+  }
+}
+
+function buildConditions(
+  resort: Resort,
+  baseData: OpenMeteoResponse,
+  midData: OpenMeteoResponse,
+  peakData: OpenMeteoResponse,
+  providerFetchedAt: Date,
+  requireCurrentHour = false,
+): WeatherConditions {
 
   const baseDays = elevationDays(baseData);
   const midDays  = elevationDays(midData);
@@ -264,7 +349,7 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
     peak: { elevation_ft: peakElevFt, ...peakDays[date] },
   }));
 
-  const start  = currentHourIndex(peakData);
+  const start  = currentHourIndex(peakData, requireCurrentHour);
   const peakH  = peakData.hourly;
   const times  = peakH.time;
 
@@ -281,7 +366,7 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
     });
   }
 
-  const result: WeatherConditions = {
+  return {
     resort:        resort.name,
     state:         resort.state,
     weather_metadata: createWeatherMetadata(providerFetchedAt),
@@ -289,8 +374,6 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
     forecast,
   };
 
-  conditionsCache.set(resort.id, result);
-  return result;
 }
 
 // ── Metadata ──────────────────────────────────────────────────────────────────

@@ -6,6 +6,8 @@ import request from 'supertest';
 
 import { Cache } from '../src/cache';
 import { RESORTS } from '../src/data/resorts';
+import { HIKING_DESTINATIONS } from '../src/data/hiking';
+import { trailWeatherFixture } from './fixtures/trailWeather';
 import { app } from '../src/server';
 import { fetchResortConditions } from '../src/services/openMeteo';
 import { feetToInches, feetToMiles, roundFeet } from '../src/services/openMeteoUnits';
@@ -62,15 +64,17 @@ describe('provider-free API behavior', () => {
     assert.ok(response.body.every((resort: {id: string}) => resort.id !== 'old-rag'));
   });
 
-  it('lists Old Rag separately as a summit-only hiking destination', async () => {
+  it('lists Old Rag separately with three mapped trail weather points', async () => {
     const response = await request(app).get('/hiking/conditions');
 
     assert.equal(response.status, 200);
-    assert.deepEqual(response.body, [{
+    assert.deepEqual(response.body.map(({ weather_points: _points, ...metadata }: {weather_points: unknown}) => metadata), [{
       id: 'old-rag', name: 'Old Rag', state: 'VA',
-      latitude: 38.5518, longitude: -78.3142,
-      base_elevation_ft: 3291, mid_elevation_ft: 3291, peak_elevation_ft: 3291,
+      latitude: 38.55171256, longitude: -78.31460513,
+      base_elevation_ft: 933, mid_elevation_ft: 2101, peak_elevation_ft: 3272,
     }]);
+    assert.deepEqual(Object.keys(response.body[0].weather_points), ['base', 'mid', 'peak']);
+    assert.equal(response.body[0].weather_points.base.latitude, 38.57162186);
     const skiResponse = await request(app).get('/resorts/old-rag/conditions');
     assert.equal(skiResponse.status, 404);
   });
@@ -173,13 +177,12 @@ describe('provider-backed route behavior without network access', () => {
     }
   });
 
-  it('serves Old Rag summit weather with attribution and null/zero semantics, using only Open-Meteo', async () => {
+  it('serves Old Rag trail weather with attribution and null/zero semantics, using only Open-Meteo', async () => {
     const originalFetch = globalThis.fetch;
     const urls: string[] = [];
-    const weather = openMeteoFixture();
-    weather.hourly.temperature_2m[0] = null;
     globalThis.fetch = async input => {
       urls.push(String(input));
+      const weather = trailWeatherFixture(Number(new URL(String(input)).searchParams.get('elevation')));
       return new Response(JSON.stringify(weather), {
         headers: { 'Content-Type': 'application/json' }, status: 200,
       });
@@ -193,16 +196,18 @@ describe('provider-backed route behavior without network access', () => {
       assert.equal(response.body.weather_metadata.source, 'open-meteo');
       assert.equal(response.body.weather_metadata.model_run_at, null);
       assert.ok(Number.isFinite(Date.parse(response.body.weather_metadata.fetched_at)));
-      assert.equal(response.body.next_12_hours[0].peak.elevation_ft, 3291);
+      assert.equal(response.body.next_12_hours[0].peak.elevation_ft, 3272);
       assert.equal(response.body.next_12_hours[0].peak.temperature_f, null);
       assert.equal(response.body.next_12_hours[0].peak.rain_in, null);
       assert.equal(response.body.next_12_hours[1].peak.rain_in, 0);
-      assert.deepEqual(response.body.next_12_hours[0].base, response.body.next_12_hours[0].peak);
-      assert.equal(urls.length, 1);
-      const url = new URL(urls[0]);
-      assert.equal(url.origin, 'https://api.open-meteo.com');
-      assert.equal(url.searchParams.get('latitude'), '38.5518');
-      assert.equal(url.searchParams.get('longitude'), '-78.3142');
+      assert.equal(urls.length, 3);
+      for (const [index, point] of Object.values(HIKING_DESTINATIONS[0].weather_points).entries()) {
+        const url = new URL(urls[index]);
+        assert.equal(url.origin, 'https://api.open-meteo.com');
+        assert.equal(url.searchParams.get('latitude'), String(point.latitude));
+        assert.equal(url.searchParams.get('longitude'), String(point.longitude));
+        assert.equal(url.searchParams.get('elevation'), String(point.elevation));
+      }
     } finally {
       globalThis.fetch = originalFetch;
     }

@@ -11,6 +11,20 @@ export interface Resort {
   peak_elevation: number; // meters
 }
 
+export type ElevationZone = 'base' | 'mid' | 'peak';
+
+/** A mapped trail weather point. Elevation is absolute metres above sea level. */
+export interface TrailWeatherPoint {
+  latitude: number;
+  longitude: number;
+  elevation: number;
+  label: string;
+}
+
+export interface HikingDestination extends Resort {
+  weather_points: Record<ElevationZone, TrailWeatherPoint>;
+}
+
 // ── Public API response types ─────────────────────────────────────────────────
 
 export interface ResortMetadata {
@@ -153,6 +167,8 @@ export interface RecommendRequest {
 export interface OpenMeteoResponse {
   elevation: number;
   utc_offset_seconds: number;
+  hourly_units?: Record<string, string>;
+  daily_units?: Record<string, string>;
   hourly: {
     time: string[];
     temperature_2m: (number | null)[];
