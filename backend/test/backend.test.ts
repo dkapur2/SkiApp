@@ -58,6 +58,29 @@ describe('provider-free API behavior', () => {
     assert.equal(response.status, 200);
     assert.equal(response.body.length, RESORTS.length);
     assert.equal(response.body[0].id, RESORTS[0].id);
+    assert.equal(response.body.length, 158);
+    assert.ok(response.body.every((resort: {id: string}) => resort.id !== 'old-rag'));
+  });
+
+  it('lists Old Rag separately as a summit-only hiking destination', async () => {
+    const response = await request(app).get('/hiking/conditions');
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, [{
+      id: 'old-rag', name: 'Old Rag', state: 'VA',
+      latitude: 38.5518, longitude: -78.3142,
+      base_elevation_ft: 3291, mid_elevation_ft: 3291, peak_elevation_ft: 3291,
+    }]);
+    const skiResponse = await request(app).get('/resorts/old-rag/conditions');
+    assert.equal(skiResponse.status, 404);
+  });
+
+  it('rejects unknown hiking destinations and unmatched hiking API paths with JSON', async () => {
+    for (const path of ['/hiking/not-a-mountain/conditions', '/hiking/not-an-api-route']) {
+      const response = await request(app).get(path);
+      assert.equal(response.status, 404);
+      assert.match(response.headers['content-type'], /^application\/json/);
+    }
   });
 
   it('rejects an unknown resort before calling a provider', async () => {
@@ -140,10 +163,46 @@ describe('provider-backed route behavior without network access', () => {
     };
 
     try {
-      const response = await request(app).get('/resorts/blue-knob/conditions');
+      for (const path of ['/resorts/blue-knob/conditions', '/hiking/old-rag/conditions']) {
+        const response = await request(app).get(path);
+        assert.equal(response.status, 502);
+        assert.match(response.body.detail, /provider unavailable/);
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 
-      assert.equal(response.status, 502);
-      assert.match(response.body.detail, /provider unavailable/);
+  it('serves Old Rag summit weather with attribution and null/zero semantics, using only Open-Meteo', async () => {
+    const originalFetch = globalThis.fetch;
+    const urls: string[] = [];
+    const weather = openMeteoFixture();
+    weather.hourly.temperature_2m[0] = null;
+    globalThis.fetch = async input => {
+      urls.push(String(input));
+      return new Response(JSON.stringify(weather), {
+        headers: { 'Content-Type': 'application/json' }, status: 200,
+      });
+    };
+    try {
+      const response = await request(app).get('/hiking/old-rag/conditions');
+      assert.equal(response.status, 200);
+      assert.equal(response.body.resort, 'Old Rag');
+      assert.equal(response.body.state, 'VA');
+      assert.equal(response.body.ski_conditions, null);
+      assert.equal(response.body.weather_metadata.source, 'open-meteo');
+      assert.equal(response.body.weather_metadata.model_run_at, null);
+      assert.ok(Number.isFinite(Date.parse(response.body.weather_metadata.fetched_at)));
+      assert.equal(response.body.next_12_hours[0].peak.elevation_ft, 3291);
+      assert.equal(response.body.next_12_hours[0].peak.temperature_f, null);
+      assert.equal(response.body.next_12_hours[0].peak.rain_in, null);
+      assert.equal(response.body.next_12_hours[1].peak.rain_in, 0);
+      assert.deepEqual(response.body.next_12_hours[0].base, response.body.next_12_hours[0].peak);
+      assert.equal(urls.length, 1);
+      const url = new URL(urls[0]);
+      assert.equal(url.origin, 'https://api.open-meteo.com');
+      assert.equal(url.searchParams.get('latitude'), '38.5518');
+      assert.equal(url.searchParams.get('longitude'), '-78.3142');
     } finally {
       globalThis.fetch = originalFetch;
     }

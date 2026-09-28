@@ -296,7 +296,11 @@ export async function fetchResortConditions(resort: Resort): Promise<WeatherCond
 // ── Metadata ──────────────────────────────────────────────────────────────────
 
 export function getAllResortMetadata(): ResortMetadata[] {
-  return RESORTS.map(r => ({
+  return RESORTS.map(getResortMetadata);
+}
+
+export function getResortMetadata(r: Resort): ResortMetadata {
+  return {
     id:                r.id,
     name:              r.name,
     state:             r.state,
@@ -305,7 +309,7 @@ export function getAllResortMetadata(): ResortMetadata[] {
     base_elevation_ft: Math.round(r.base_elevation * 3.28084),
     mid_elevation_ft:  Math.round(r.mid_elevation  * 3.28084),
     peak_elevation_ft: Math.round(r.peak_elevation * 3.28084),
-  }));
+  };
 }
 
 // ── Background cache warming ──────────────────────────────────────────────────

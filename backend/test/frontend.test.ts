@@ -36,9 +36,9 @@ function fixture() {
 // Execute the shipped script with a small DOM sink. Assertions inspect HTML
 // produced by the real selection/render functions, never source keywords.
 async function page(payload: unknown) {
-  const nodes = new Map<string, {innerHTML: string; value: string; style: Record<string, string>; classList: {add(): void; remove(): void}; addEventListener(): void}>();
+  const nodes = new Map<string, {innerHTML: string; value: string; style: Record<string, string>; classList: {add(): void; remove(): void}; addEventListener(): void; querySelectorAll(): []}>();
   const node = (id: string) => {
-    if (!nodes.has(id)) nodes.set(id, {innerHTML: '', value: '', style: {}, classList: {add() {}, remove() {}}, addEventListener() {}});
+    if (!nodes.has(id)) nodes.set(id, {innerHTML: '', value: '', style: {}, classList: {add() {}, remove() {}}, addEventListener() {}, querySelectorAll: () => []});
     return nodes.get(id)!;
   };
   const timers: (() => void)[] = [];
@@ -51,24 +51,84 @@ async function page(payload: unknown) {
     setInterval: (callback: () => void) => timers.push(callback),
     fetch: async (url: string) => {
       requests.push(url);
-      if (url.endsWith('/resorts/conditions')) return {ok: true, json: async () => [{id: 'fixture', name: 'Fixture Mountain', base_elevation_ft: 1000, mid_elevation_ft: 2000, peak_elevation_ft: 3000}]};
-      assert.equal(url, 'https://skiapp-staging.up.railway.app/resorts/fixture/conditions');
-      return {ok: !fail, status: fail ? 502 : 200, json: async () => payload};
+      if (url.endsWith('/resorts/conditions')) return {ok: true, json: async () => [{id: 'fixture', name: 'Fixture Mountain', state: 'VT', base_elevation_ft: 1000, mid_elevation_ft: 2000, peak_elevation_ft: 3000}]};
+      if (url.endsWith('/hiking/conditions')) return {ok: true, json: async () => [{id: 'old-rag', name: 'Old Rag', state: 'VA', base_elevation_ft: 3291, mid_elevation_ft: 3291, peak_elevation_ft: 3291}]};
+      assert.ok([
+        'https://skiapp-staging.up.railway.app/resorts/fixture/conditions',
+        'https://skiapp-staging.up.railway.app/hiking/old-rag/conditions',
+      ].includes(url));
+      return {ok: !fail, status: fail ? 502 : 200, json: async () =>
+        url.includes('/hiking/') ? { ...(payload as object), resort: 'Old Rag', state: 'VA' } : payload};
     },
   });
   runInContext('Date.now = () => clock', context);
   runInContext(script!, context);
   await runInContext('init()', context);
-  const select = () => runInContext('selectResort("fixture", "Fixture Mountain")', context) as Promise<void>;
+  const select = (id = 'fixture', name = 'Fixture Mountain') =>
+    runInContext(`selectResort(${JSON.stringify(id)}, ${JSON.stringify(name)})`, context) as Promise<void>;
   await select();
   return {
     node, requests, select,
+    search: (value: string) => {
+      node('resort-search').value = value;
+      runInContext('renderDropdownItems(filteredResorts())', context);
+      return node('dropdown').innerHTML;
+    },
     fail: () => { fail = true; },
     advance: (minutes: number) => { context.clock += minutes * 60_000; timers.forEach(callback => callback()); },
   };
 }
 
 describe('rendered web forecast', () => {
+  it('groups Old Rag under Hiking separately from state groups and finds it by name or activity', async () => {
+    const view = await page(fixture());
+    const dropdown = view.search('');
+    assert.match(dropdown, /dropdown-group-header">Vermont<\/div>[\s\S]*Fixture Mountain/);
+    assert.match(dropdown, /dropdown-group-header">Hiking<\/div>[\s\S]*data-id="old-rag"[\s\S]*Old Rag/);
+    assert.doesNotMatch(dropdown, /Virginia/);
+    for (const query of ['OLD rag', 'hiking']) {
+      const filtered = view.search(query);
+      assert.match(filtered, /Hiking[\s\S]*Old Rag[\s\S]*Summit 3,291 ft/);
+      assert.doesNotMatch(filtered, /Fixture Mountain|Vermont/);
+    }
+    assert.match(view.search('no-such-place'), /No destinations found/);
+  });
+
+  it('loads hiking summit forecasts, preserves unavailable/zero values and returns to the ski controls', async () => {
+    const view = await page(fixture());
+    await view.select('old-rag', 'Old Rag');
+    const rendered = view.node('content').innerHTML;
+    assert.ok(view.requests.some(url => url.endsWith('/hiking/old-rag/conditions')));
+    assert.match(rendered, /<h2>Old Rag<\/h2>/);
+    assert.match(rendered, /Hiking · Virginia/);
+    assert.match(rendered, /Summit 3,291 ft/);
+    assert.match(rendered, /Summit weather forecast; trail conditions are not reported/);
+    assert.match(rendered, /Weather data by Open-Meteo.com/);
+    assert.match(rendered, /Provider model run: Not provided/);
+    assert.doesNotMatch(rendered, /Ask AI Advisor|Resort operations|data-elev="base"|data-elev="mid"/);
+    const hourly = view.node('hourly-scroll').innerHTML;
+    assert.match(hourly, /Summit/);
+    assert.match(hourly, /Snow — · Rain —/);
+    assert.match(hourly, /Snow 0" · Rain 0"/);
+    assert.doesNotMatch(hourly, /h-base|h-mid/);
+    view.advance(26);
+    assert.match(view.node('sources-freshness').innerHTML, /Stale — fetched more than 30 minutes ago/);
+    assert.doesNotMatch(view.node('sources-freshness').innerHTML, /Resort operations/);
+
+    await view.select();
+    assert.match(view.node('content').innerHTML, /Ask AI Advisor/);
+    assert.match(view.node('content').innerHTML, /data-elev="base"/);
+    assert.match(view.node('hourly-scroll').innerHTML, /h-base/);
+  });
+
+  it('shows a failed hiking forecast as an error without stale weather content', async () => {
+    const view = await page(fixture());
+    view.fail();
+    await view.select('old-rag', 'Old Rag');
+    assert.match(view.node('content').innerHTML, /Failed to load conditions for Old Rag: HTTP 502/);
+    assert.doesNotMatch(view.node('content').innerHTML, /Weather server fetch|Snow 0/);
+  });
+
   it('renders linked attribution and the server timestamp after selecting a resort', async () => {
     const view = await page(fixture());
     const rendered = view.node('content').innerHTML;

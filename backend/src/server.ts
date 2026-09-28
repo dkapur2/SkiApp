@@ -3,7 +3,8 @@ import cors from 'cors';
 import path from 'path';
 
 import { RESORTS_BY_ID } from './data/resorts';
-import { fetchResortConditions, getAllResortMetadata, warmCache } from './services/openMeteo';
+import { HIKING_BY_ID, HIKING_DESTINATIONS } from './data/hiking';
+import { fetchResortConditions, getAllResortMetadata, getResortMetadata, warmCache } from './services/openMeteo';
 import { fetchSkiApiData } from './services/skiApi';
 import { getRecommendation } from './services/ai';
 import type { RecommendRequest } from './types';
@@ -64,6 +65,27 @@ app.get('/resorts/:resortId/conditions', async (req, res) => {
   }
 });
 
+/** Web hiking destinations are separate from the existing ski resort catalog. */
+app.get('/hiking/conditions', (_req, res) => {
+  res.json(HIKING_DESTINATIONS.map(getResortMetadata));
+});
+
+/** Summit weather only: no ski operations provider or recommendations. */
+app.get('/hiking/:destinationId/conditions', async (req, res) => {
+  const destination = HIKING_BY_ID.get(req.params.destinationId);
+  if (!destination) {
+    res.status(404).json({ detail: `Hiking destination '${req.params.destinationId}' not found` });
+    return;
+  }
+  try {
+    const conditions = await fetchResortConditions(destination);
+    res.json({ ...conditions, ski_conditions: null });
+  } catch (e) {
+    console.error(`[hiking conditions] ${destination.id}:`, e);
+    res.status(502).json({ detail: String(e) });
+  }
+});
+
 /** AI recommendation, optionally enriched with Ski API signals. */
 app.post('/recommend', async (req, res) => {
   const body = req.body as RecommendRequest;
@@ -89,7 +111,7 @@ app.post('/recommend', async (req, res) => {
 });
 
 // Do not let unmatched API paths fall through to the HTML application shell.
-app.use(['/resorts', '/recommend'], (_req, res) => {
+app.use(['/resorts', '/hiking', '/recommend'], (_req, res) => {
   res.status(404).json({ detail: 'API route not found' });
 });
 
